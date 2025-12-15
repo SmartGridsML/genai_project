@@ -1,7 +1,8 @@
 # genai_project
 
 # Project Structure
-´´´bash
+
+'''bash
 cv-application-helper/
 │
 ├── backend/
@@ -92,4 +93,4 @@ cv-application-helper/
     ├── API.md                         # OpenAPI docs
     ├── ARCHITECTURE.md
     └── EVALUATION.md                  # How you measure quality
-´´´
+'''
