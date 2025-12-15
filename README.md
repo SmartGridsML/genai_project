@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # genai_project
 
 # Project Structure
@@ -93,4 +94,5 @@ cv-application-helper/
     ├── API.md                         # OpenAPI docs
     ├── ARCHITECTURE.md
     └── EVALUATION.md                  # How you measure quality
+
 
