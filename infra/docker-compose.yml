@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: ../backend
+    container_name: cv-helper-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - ../backend/app:/app/app  # enables live editing without rebuild (good for dev)
+
+  redis:
+    image: redis:7-alpine
+    container_name: cv-helper-redis
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: cv-helper-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
