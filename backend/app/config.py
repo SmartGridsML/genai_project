@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # Infrastructure
     redis_url: str = "redis://localhost:6379"
     database_url: str = "postgresql://localhost:5432/postgres"
-    
+    cache_ttl_seconds: int = int(24 * 3600)
     # LLM Configuration
     openai_api_key: SecretStr = Field(..., description="Required for LLM calls")
     openai_model: str = "gpt-4o"
@@ -25,5 +25,6 @@ class Settings(BaseSettings):
     # MLflow
     mlflow_tracking_uri: str = "file:./mlruns"
     experiment_name: str = "cv_helper_v1"
+
 
 settings = Settings()
