@@ -10,8 +10,12 @@ from app.services.cache_service import CacheService
 from app.services.llm_client import LLMClient
 
 router = APIRouter(prefix="/applications", tags=["applications"])
-cache = CacheService(settings.redis_url)
-llm = LLMClient(settings.llm_base_url)
+def get_cache() -> CacheService:
+    return CacheService(settings.redis_url)
+
+def get_llm_client() -> LLMClient:
+    return LLMClient(settings.llm_base_url)
+
 
 def _sha256(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
@@ -84,6 +88,8 @@ async def generate_application(
     jd_cache_key = f"jd:{jd_hash}"
 
     # 2) facts (cached)
+    cache = get_cache()
+    llm = get_llm_client()
     facts = cache.get_json(facts_cache_key)
     if facts is None:
         facts = await llm.extract_facts(parsed.sections)
