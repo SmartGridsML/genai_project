@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.health import router as health_router
 from app.api.routes.applications import router as applications_router
 from app.utils.request_id import RequestIDMiddleware
+from app.api.routes.llm import router as llm_router
 
 
 def create_app() -> FastAPI:
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(applications_router)
+    app.include_router(llm_router)
     return app
 
 
