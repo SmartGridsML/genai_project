@@ -61,7 +61,8 @@ class LLMService:
         system_prompt: str, 
         user_prompt: str, 
         temperature: float = 0.7,
-        max_tokens: int = 1000
+        max_tokens: int = 1000,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Generates a response from the LLM with:
@@ -89,7 +90,9 @@ class LLMService:
                     ],
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    timeout=self.settings.timeout_seconds
+
+                    timeout=settings.timeout_seconds,
+                    response_format=response_format
                 )
                 
                 result_text = response.choices[0].message.content
