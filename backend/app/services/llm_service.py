@@ -91,7 +91,7 @@ class LLMService:
                     temperature=temperature,
                     max_tokens=max_tokens,
 
-                    timeout=settings.timeout_seconds,
+                    timeout=self.settings.timeout_seconds,
                     response_format=response_format
                 )
                 
