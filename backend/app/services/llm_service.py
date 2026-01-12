@@ -17,7 +17,7 @@ from tenacity import (
     before_sleep_log
 )
 
-from app.config import settings
+from app.config import get_settings
 
 # Setup structured logging
 logger = logging.getLogger(__name__)
@@ -26,14 +26,19 @@ class LLMService:
     def __init__(self):
         # We initialize the client once. 
         # Accessing the SecretStr value requires .get_secret_value()
-        self.client = OpenAI(api_key=settings.openai_api_key.get_secret_value())
-        self.model = settings.openai_model
+        self.settings = get_settings()
+        if self.settings.openai_api_key is None:
+            raise RuntimeError("OPENAI_API_KEY is required for LLM calls")
+
+        self.client = OpenAI(api_key=self.settings.openai_api_key.get_secret_value())
+
+        self.model = self.settings.openai_model
         # Cache the encoding to avoid re-loading it every call
         self.encoding = tiktoken.encoding_for_model("gpt-4") # Fallback for most models
 
         # Initialize MLflow experiment
-        mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
-        mlflow.set_experiment(settings.experiment_name)
+        mlflow.set_tracking_uri(self.settings.mlflow_tracking_uri)
+        mlflow.set_experiment(self.settings.experiment_name)
 
     def count_tokens(self, text: str) -> int:
         """
@@ -46,10 +51,10 @@ class LLMService:
             return len(text.split()) * 1.3 # Rough estimate
 
     @retry(
-        retry=retry_if_exception_type((OpenAIError, ConnectionError)),
-        stop=stop_after_attempt(settings.max_retries),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        before_sleep=before_sleep_log(logger, logging.WARNING)
+    retry=retry_if_exception_type((Exception, ConnectionError)),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     def generate_response(
         self, 
@@ -85,7 +90,8 @@ class LLMService:
                     ],
                     temperature=temperature,
                     max_tokens=max_tokens,
-                    timeout=settings.timeout_seconds,
+
+                    timeout=self.settings.timeout_seconds,
                     response_format=response_format
                 )
                 
@@ -118,5 +124,6 @@ class LLMService:
             # Re-raise so the caller knows it failed, or return a fallback object
             raise e
 
-# Singleton instance for easy import
-llm_service = LLMService()
+def get_llm_service() -> "LLMService":
+    return LLMService()
+
