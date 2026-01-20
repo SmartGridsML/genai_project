@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
-from app.main import app
+from backend.app.main import app
 
 client = TestClient(app)
 
@@ -15,7 +15,7 @@ def test_fact_extract_stub():
 
 def test_jd_analyze_mocked(monkeypatch):
     # Patch get_llm_service used by llm router module
-    import app.api.routes.llm as llm_routes
+    import backend.app.api.routes.llm as llm_routes
 
     fake = MagicMock()
     fake.generate_response.return_value = {
@@ -31,7 +31,7 @@ def test_jd_analyze_mocked(monkeypatch):
 
 
 def test_cover_letter_mocked(monkeypatch):
-    import app.api.routes.llm as llm_routes
+    import backend.app.api.routes.llm as llm_routes
 
     fake = MagicMock()
     fake.generate_response.return_value = {"content": '{"cover_letter":"Hello "}'}
