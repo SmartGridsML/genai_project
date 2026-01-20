@@ -17,7 +17,7 @@ from tenacity import (
     before_sleep_log
 )
 
-from app.config import get_settings
+from backend.app.config import get_settings
 
 # Setup structured logging
 logger = logging.getLogger(__name__)

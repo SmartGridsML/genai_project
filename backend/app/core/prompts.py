@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from app.models.schemas import ExtractedFacts, JobAnalysis
+from backend.app.models.schemas import ExtractedFacts, JobAnalysis
 
 class PromptVersion(Enum):
     V1 = "v1"
