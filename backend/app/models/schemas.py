@@ -27,7 +27,10 @@ class ApplicationGenerateResponse(BaseModel):
 class KeyFact(BaseModel):
     category: str = Field(..., description="")
     fact: str = Field(..., description="")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score between 0 and 1")
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0,
+        description="Confidence score between 0 and 1"
+    )
 
 
 class ExtractedFacts(BaseModel):
@@ -39,3 +42,48 @@ class JobAnalysis(BaseModel):
     required_skills: List[str]
     experience_level: str
     remote_policy: str
+
+
+class ClaimVerification(BaseModel):
+    """Result of verifying a single claim against the fact table."""
+    claim: str = Field(
+        ..., description="The claim extracted from the cover letter"
+    )
+    supported: bool = Field(
+        ..., description="Whether the claim is supported by the fact table"
+    )
+    source: str = Field(
+        ..., description="Source from CV or 'UNSUPPORTED'"
+    )
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Confidence score"
+    )
+    reasoning: Optional[str] = Field(
+        None, description="Explanation of the verification decision"
+    )
+
+
+class AuditReport(BaseModel):
+    """Complete audit report for a generated cover letter."""
+    verifications: List[ClaimVerification] = Field(
+        ..., description="Individual claim verifications"
+    )
+    total_claims: int = Field(
+        ..., description="Total number of claims extracted"
+    )
+    supported_claims: int = Field(
+        ..., description="Number of supported claims"
+    )
+    unsupported_claims: int = Field(
+        ..., description="Number of unsupported claims"
+    )
+    hallucination_rate: float = Field(
+        ..., ge=0.0, le=1.0, description="Percentage of unsupported claims"
+    )
+    flagged: bool = Field(
+        ..., description="True if >2 unsupported claims detected"
+    )
+    overall_confidence: float = Field(
+        ..., ge=0.0, le=1.0,
+        description="Average confidence across all verifications"
+    )
