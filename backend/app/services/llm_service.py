@@ -321,27 +321,6 @@ class LLMService:
                 # Log metrics to MLflow
                 mlflow.log_param("temperature", temperature)
                 mlflow.log_param("input_tokens", input_tokens)
-                
-                client = self._get_client()
-                response = client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-
-                    timeout=self.settings.timeout_seconds,
-                    response_format=response_format
-                )
-                
-                result_text = response.choices[0].message.content
-                output_tokens = response.usage.completion_tokens if response.usage else self.count_tokens(result_text)
-                total_tokens = response.usage.total_tokens if response.usage else (input_tokens + output_tokens)
-                
-                # Log metrics
-                duration = time.time() - start_time
                 mlflow.log_metric("duration_seconds", duration)
                 mlflow.log_metric("output_tokens", output_tokens)
                 mlflow.log_metric("total_tokens", total_tokens)

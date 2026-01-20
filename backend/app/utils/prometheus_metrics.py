@@ -403,7 +403,7 @@ def get_metrics() -> tuple[bytes, str]:
 """
 Example: Instrumenting a cover letter generation endpoint
 
-from app.utils.prometheus_metrics import (
+from backend.app.utils.prometheus_metrics import (
     track_request_metrics,
     record_hallucination_metrics,
     record_fact_extraction_metrics,
