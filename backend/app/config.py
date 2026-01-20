@@ -23,9 +23,11 @@ class Settings(BaseSettings):
 
     # LLM Configuration
     # NOTE: keep it optional for import-time, enforce at call-time.
-    openai_api_key: SecretStr | None = Field(default=None, description="Required for LLM calls")
+    openai_api_key: SecretStr | None = Field(default=None, description="Primary LLM provider")
+    gemini_api_key: SecretStr | None = Field(default=None, description="Fallback LLM provider")
 
     openai_model: str = "gpt-4o"
+    gemini_model: str = "gemini-2.5-flash"
     max_retries: int = 3
     timeout_seconds: int = 30
 
