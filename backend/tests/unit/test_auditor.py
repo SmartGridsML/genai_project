@@ -15,8 +15,8 @@ import pytest
 import json
 from unittest.mock import MagicMock, patch
 
-from app.core.auditor import Auditor, AuditorError
-from app.models.schemas import (
+from backend.app.core.auditor import Auditor, AuditorError
+from backend.app.models.schemas import (
     ExtractedFacts,
     KeyFact,
     ClaimVerification,
@@ -150,7 +150,7 @@ class TestAuditorInit:
 class TestAuditorHappyPath:
     """Test successful auditing scenarios."""
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_truthful_cover_letter(
         self,
         mock_mlflow,
@@ -205,7 +205,7 @@ class TestAuditorHappyPath:
         mock_mlflow.log_param.assert_called()
         mock_mlflow.log_metric.assert_called()
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_hallucinated_cover_letter(
         self,
         mock_mlflow,
@@ -267,7 +267,7 @@ class TestAuditorHappyPath:
         assert report.flagged is True  # >2 unsupported claims
         assert report.overall_confidence < 0.3
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_mixed_claims(
         self,
         mock_mlflow,
@@ -370,7 +370,7 @@ class TestAuditorErrorHandling:
 
         assert "Fact table cannot be empty" in str(exc_info.value)
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_invalid_claim_extraction_json(
         self,
         mock_mlflow,
@@ -394,7 +394,7 @@ class TestAuditorErrorHandling:
 
         assert "invalid JSON" in str(exc_info.value)
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_missing_claims_field(
         self,
         mock_mlflow,
@@ -420,7 +420,7 @@ class TestAuditorErrorHandling:
 
         assert "missing 'claims' field" in str(exc_info.value)
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_claims_not_list(
         self,
         mock_mlflow,
@@ -446,7 +446,7 @@ class TestAuditorErrorHandling:
 
         assert "must be a list" in str(exc_info.value)
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_verification_failure_fallback(
         self,
         mock_mlflow,
@@ -509,7 +509,7 @@ class TestAuditorErrorHandling:
 class TestAuditorBoundaryConditions:
     """Test boundary conditions and edge cases."""
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_exactly_threshold_unsupported_claims(
         self,
         mock_mlflow,
@@ -569,7 +569,7 @@ class TestAuditorBoundaryConditions:
         assert report.unsupported_claims == 2
         assert report.flagged is False  # Exactly 2, not >2
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_one_over_threshold(
         self,
         mock_mlflow,
@@ -626,7 +626,7 @@ class TestAuditorBoundaryConditions:
         assert report.unsupported_claims == 3
         assert report.flagged is True
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_audit_no_claims_extracted(
         self,
         mock_mlflow,
@@ -660,7 +660,7 @@ class TestAuditorBoundaryConditions:
 class TestAuditorMLflowLogging:
     """Test MLflow logging functionality."""
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_logs_audit_parameters(
         self,
         mock_mlflow,
@@ -694,7 +694,7 @@ class TestAuditorMLflowLogging:
         mock_mlflow.log_param.assert_called()
         mock_mlflow.log_metric.assert_called()
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_logs_comprehensive_metrics(
         self,
         mock_mlflow,
@@ -719,7 +719,7 @@ class TestAuditorMLflowLogging:
         # In a real test, you'd verify specific metric names
         assert mock_mlflow.log_metric.call_count >= 5
 
-    @patch('app.core.auditor.mlflow')
+    @patch('backend.app.core.auditor.mlflow')
     def test_logs_unsupported_claims(
         self,
         mock_mlflow,
