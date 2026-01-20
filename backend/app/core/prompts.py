@@ -130,4 +130,26 @@ class Prompts:
             """
         else:
             raise ValueError(f"Unsupported prompt version: {version}")
+        
+    @staticmethod
+    def get_cv_enhancement_system(version: PromptVersion) -> str:
+        schema_json = json.dumps(CVEnhancement.model_json_schema(), indent=2)
+
+        if version == PromptVersion.V1:
+            return f"""
+            You are a CV improvement assistant.
+
+            CRITICAL RULES:
+            - You MUST NOT invent facts.
+            - You may ONLY rewrite/reframe information that is present in the provided FACTS (fact_table).
+            - The "before" field MUST be an exact snippet copied from the original CV text.
+            - If a JD requirement is not supported by FACTS, do NOT imply it exists.
+            - Output MUST be STRICT JSON matching the schema below.
+
+            Output JSON schema:
+            {schema_json}
+            """
+        else:
+            raise ValueError(f"Unsupported prompt version: {version}")
+
 

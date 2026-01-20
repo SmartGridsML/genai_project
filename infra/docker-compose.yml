@@ -13,7 +13,22 @@ services:
       - redis
       - postgres
     volumes:
-      - ../backend/app:/app/app  # enables live editing without rebuild (good for dev)
+      - ../backend/app:/app/app  # live-edit app code
+
+  tests:
+    build:
+      context: ../backend
+    working_dir: /app
+    volumes:
+      - ../backend:/app
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    depends_on:
+      - redis
+      - postgres
+    command: ["python", "-m", "pytest", "-q"]
 
   redis:
     image: redis:7-alpine
@@ -35,3 +50,4 @@ services:
 
 volumes:
   postgres_data:
+
