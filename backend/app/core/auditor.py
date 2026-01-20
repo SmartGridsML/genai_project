@@ -20,9 +20,9 @@ from typing import List
 import mlflow
 from pydantic import ValidationError
 
-from app.core.prompts import PromptVersion, Prompts
-from app.services.llm_service import LLMService
-from app.models.schemas import (
+from backend.app.core.prompts import PromptVersion, Prompts
+from backend.app.services.llm_service import LLMService
+from backend.app.models.schemas import (
     ExtractedFacts,
     ClaimVerification,
     AuditReport

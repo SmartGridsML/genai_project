@@ -8,9 +8,9 @@ import logging
 import mlflow
 from pydantic import ValidationError
 
-from app.core.prompts import PromptVersion, Prompts
-from app.services.llm_service import LLMService
-from app.models.schemas import ExtractedFacts
+from backend.app.core.prompts import PromptVersion, Prompts
+from backend.app.services.llm_service import LLMService
+from backend.app.models.schemas import ExtractedFacts
 
 logger = logging.getLogger(__name__)
 

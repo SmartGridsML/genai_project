@@ -1,0 +1,108 @@
+{
+  "test_cases": [
+    {
+      "id": "happy_path_senior_engineer",
+      "name": "Happy Path: Senior Engineer with Strong Match",
+      "description": "Well-qualified senior engineer applying to matching role",
+      "cv_text": "John Smith\nSenior Software Engineer\n\nExperience:\n- Senior Software Engineer at Google (2020-2023)\n  - Led team of 5 backend engineers\n  - Built microservices architecture serving 10M+ users\n  - Technologies: Python, FastAPI, PostgreSQL, Docker, Kubernetes\n  - Reduced API latency by 40% through optimization\n\n- Software Engineer at Amazon (2018-2020)\n  - Developed payment processing system\n  - Implemented CI/CD pipelines\n  - Technologies: Java, Spring Boot, AWS\n\nEducation:\n- BS Computer Science, MIT (2014-2018)\n- GPA: 3.8/4.0\n\nSkills:\n- Languages: Python, Java, JavaScript, Go\n- Frameworks: FastAPI, Django, Spring Boot, React\n- Cloud: AWS, GCP, Docker, Kubernetes\n- Databases: PostgreSQL, MySQL, MongoDB, Redis",
+      "job_description": "Senior Backend Engineer\n\nWe're seeking a Senior Backend Engineer to join our platform team. You'll lead the development of scalable microservices and mentor junior engineers.\n\nRequirements:\n- 5+ years backend development experience\n- Strong Python and FastAPI experience\n- Experience with microservices architecture\n- Cloud experience (AWS or GCP)\n- Team leadership experience\n\nNice to have:\n- Docker/Kubernetes expertise\n- PostgreSQL optimization experience",
+      "expected_hallucination_rate": 0.0,
+      "expected_facts_count": 15,
+      "expected_claims_count": 10,
+      "notes": "Perfect match - all claims should be supported"
+    },
+    {
+      "id": "sparse_cv_junior",
+      "name": "Edge Case: Sparse CV - Recent Graduate",
+      "description": "Recent graduate with minimal experience applying to entry-level role",
+      "cv_text": "Alice Johnson\n\nEducation:\n- BS Computer Science, UC Berkeley (2023)\n\nInternship:\n- Software Engineering Intern at Startup Inc. (Summer 2022)\n  - Worked on web development using React\n\nSkills:\n- Python, JavaScript, React\n- Git, basic SQL",
+      "job_description": "Junior Software Engineer\n\nEntry-level position for recent graduates. You'll work on our web platform and learn from senior engineers.\n\nRequirements:\n- BS in Computer Science or related field\n- Basic programming skills (Python or JavaScript)\n- Willingness to learn\n\nNice to have:\n- Internship experience\n- React knowledge",
+      "expected_hallucination_rate": 0.0,
+      "expected_facts_count": 5,
+      "expected_claims_count": 5,
+      "notes": "Sparse CV should not lead to invented facts"
+    },
+    {
+      "id": "long_jd_detailed_requirements",
+      "name": "Edge Case: Long Job Description with Many Requirements",
+      "description": "Comprehensive JD with 20+ requirements, candidate meets 60%",
+      "cv_text": "Michael Chen\nSoftware Engineer\n\nExperience:\n- Software Engineer at Tech Corp (2021-2023)\n  - Full-stack development using React and Node.js\n  - MongoDB database management\n  - Worked in Agile team of 8\n\nEducation:\n- BS Software Engineering, Stanford (2017-2021)\n\nSkills:\n- JavaScript, TypeScript, Python\n- React, Node.js, Express\n- MongoDB, basic PostgreSQL\n- Git, Docker basics",
+      "job_description": "Full-Stack Engineer - Expert Level\n\nWe need an expert full-stack engineer with deep expertise across our entire stack.\n\nRequired Skills (must have ALL):\n1. JavaScript/TypeScript (5+ years)\n2. React (expert level, 3+ years)\n3. Node.js/Express (expert level)\n4. Python (3+ years)\n5. FastAPI or Django\n6. PostgreSQL (advanced, query optimization)\n7. MongoDB\n8. Redis caching\n9. Docker (production experience)\n10. Kubernetes (orchestration)\n11. AWS (EC2, S3, Lambda, RDS)\n12. CI/CD (Jenkins, GitHub Actions)\n13. Microservices architecture\n14. GraphQL\n15. WebSockets\n16. Testing (Jest, Pytest, 80%+ coverage)\n17. Security best practices\n18. Performance optimization\n19. Team leadership (led 5+ engineers)\n20. Agile/Scrum master certification\n\nThis is a senior architect role requiring 7+ years experience.",
+      "expected_hallucination_rate": 0.15,
+      "expected_facts_count": 10,
+      "expected_claims_count": 12,
+      "notes": "Many requirements unmet - LLM might be tempted to embellish"
+    },
+    {
+      "id": "mismatched_skills_career_change",
+      "name": "Edge Case: Mismatched Skills - Career Changer",
+      "description": "Candidate from different domain (mechanical eng) transitioning to software",
+      "cv_text": "David Rodriguez\nMechanical Engineer transitioning to Software Development\n\nExperience:\n- Mechanical Engineer at AutoCorp (2018-2023)\n  - CAD design and simulation\n  - Project management\n  - Team collaboration\n\nEducation:\n- BS Mechanical Engineering, Georgia Tech (2014-2018)\n- Online Certificate: Full-Stack Web Development, Coursera (2023)\n\nPersonal Projects:\n- Built a task management web app using React and Firebase\n- Created Python scripts for automation\n\nSkills:\n- Learning: JavaScript, React, Python\n- Tools: Git, VS Code\n- Strong problem-solving and engineering fundamentals",
+      "job_description": "Software Engineer - Backend Team\n\nRequirements:\n- 3+ years professional software development\n- Strong Python or Java experience\n- Database design (SQL)\n- RESTful API development\n- Computer Science degree preferred",
+      "expected_hallucination_rate": 0.2,
+      "expected_facts_count": 8,
+      "expected_claims_count": 8,
+      "notes": "Domain mismatch - watch for invented software experience"
+    },
+    {
+      "id": "overqualified_phd_simple_role",
+      "name": "Edge Case: Overqualified Candidate",
+      "description": "PhD with research background applying to standard engineering role",
+      "cv_text": "Dr. Sarah Williams\n\nEducation:\n- PhD Computer Science, Stanford (2019-2023)\n  - Thesis: \"Deep Learning for Natural Language Processing\"\n  - Published 8 papers in top-tier conferences (NeurIPS, ICML)\n  - Research focus: Transformer architectures, multilingual models\n\n- MS Computer Science, Stanford (2017-2019)\n- BS Computer Science, Caltech (2013-2017)\n\nExperience:\n- Research Intern at Google Brain (Summer 2021, 2022)\n  - Developed novel attention mechanisms\n  - Implemented models in PyTorch and TensorFlow\n  - Collaborated with team of 12 researchers\n\n- Teaching Assistant for CS229 Machine Learning (2020-2022)\n\nSkills:\n- Deep Learning: PyTorch, TensorFlow, Hugging Face Transformers\n- Programming: Python, C++, CUDA\n- Research: Experiment design, paper writing, peer review\n- Mathematics: Linear algebra, probability, optimization",
+      "job_description": "Machine Learning Engineer\n\nBuild and deploy ML models for our product recommendations system.\n\nRequirements:\n- BS/MS in Computer Science or related field\n- 2+ years ML experience\n- Python and scikit-learn\n- Basic deep learning knowledge\n- Ability to work in cross-functional team\n\nNice to have:\n- Experience with PyTorch or TensorFlow\n- Cloud deployment experience",
+      "expected_hallucination_rate": 0.0,
+      "expected_facts_count": 18,
+      "expected_claims_count": 12,
+      "notes": "Overqualified - ensure doesn't undersell or oversell"
+    },
+    {
+      "id": "ambiguous_dates_gaps",
+      "name": "Edge Case: Ambiguous Dates and Employment Gaps",
+      "description": "CV with unclear dates and unexplained gaps",
+      "cv_text": "Robert Taylor\nSoftware Developer\n\nExperience:\n- Freelance Web Developer (2022-present)\n  - Built websites for small businesses\n  - WordPress, HTML/CSS, JavaScript\n\n- Software Developer at StartupXYZ (2019-2020)\n  - Full-stack development\n  - React and Node.js\n\n[Gap: 2020-2022]\n\n- Junior Developer at TechCo (2017-2018)\n  - Internship that turned into full-time\n  - Python scripting\n\nEducation:\n- Bootcamp: Full-Stack Development (2016-2017)\n- Some college coursework in Computer Science (no degree)\n\nSkills:\n- JavaScript, Python, PHP\n- React, WordPress\n- MySQL",
+      "job_description": "Web Developer\n\nFull-time position building customer-facing websites.\n\nRequirements:\n- 3+ years professional web development\n- JavaScript and modern frameworks\n- Database experience\n- Portfolio of previous work\n\nWe value:\n- Consistent work history\n- Team collaboration\n- Bachelor's degree preferred but not required",
+      "expected_hallucination_rate": 0.1,
+      "expected_facts_count": 10,
+      "expected_claims_count": 10,
+      "notes": "Watch for fabricated explanations of gaps or inflated experience"
+    },
+    {
+      "id": "quantitative_metrics_verification",
+      "name": "Quantitative Metrics Test",
+      "description": "CV with specific numbers - test for numerical accuracy",
+      "cv_text": "Jennifer Lee\nEngineering Manager\n\nExperience:\n- Engineering Manager at DataCorp (2021-2023)\n  - Managed team of 8 engineers (6 backend, 2 frontend)\n  - Increased deployment frequency from 2x/week to 5x/week\n  - Reduced production incidents by 35%\n  - Managed $500K annual budget\n  - Oversaw 3 products serving 2M monthly active users\n\n- Senior Engineer at CloudTech (2018-2021)\n  - Led migration serving 500K users with 99.9% uptime\n  - Reduced infrastructure costs by $50K/year\n  - Mentored 4 junior engineers\n\nEducation:\n- MS Computer Science, CMU (2016-2018)\n- BS Computer Science, UCLA (2012-2016)\n\nCertifications:\n- AWS Solutions Architect - Professional (2020)\n- Certified Scrum Master (2021)",
+      "job_description": "Senior Engineering Manager\n\nLead a team of 10-15 engineers building cloud infrastructure.\n\nRequirements:\n- 5+ years engineering experience\n- 2+ years management experience\n- Led teams of 5+ engineers\n- Track record of improving team metrics\n- Cloud platform expertise\n- Budget management experience\n\nNice to have:\n- MS degree\n- Relevant certifications",
+      "expected_hallucination_rate": 0.0,
+      "expected_facts_count": 20,
+      "expected_claims_count": 15,
+      "notes": "Test numerical accuracy - should use exact numbers from CV"
+    },
+    {
+      "id": "special_characters_international",
+      "name": "Edge Case: Special Characters and International Background",
+      "description": "International candidate with non-ASCII characters",
+      "cv_text": "María José García-López\nSoftware Engineer\n\nExperience:\n- Software Engineer at Tecnología Innovadora, Madrid, Spain (2020-2023)\n  - Developed microservices using Spring Boot and Java\n  - Collaborated with teams in España, México, and Argentina\n  - Technologies: Java, Kotlin, PostgreSQL\n\n- Junior Developer at Développement Logiciel, Paris, France (2018-2020)\n  - Web development using Vue.js and Python\n\nEducation:\n- Máster en Ingeniería Informática, Universidad Politécnica de Madrid (2016-2018)\n- Licenciatura en Ciencias de la Computación, UNAM, México (2012-2016)\n\nLanguages:\n- Spanish (native)\n- English (fluent - TOEFL: 110/120)\n- French (intermediate)\n- Portuguese (basic)\n\nSkills:\n- Java, Kotlin, Python, JavaScript\n- Spring Boot, Vue.js, Flask\n- PostgreSQL, MongoDB",
+      "job_description": "Backend Engineer - International Team\n\nWe're a global company with teams across Europe and Latin America.\n\nRequirements:\n- 3+ years backend development\n- Java or Python expertise\n- Experience working in distributed teams\n- English proficiency required\n- European work authorization preferred\n\nNice to have:\n- Multi-language proficiency\n- International work experience",
+      "expected_hallucination_rate": 0.0,
+      "expected_facts_count": 15,
+      "expected_claims_count": 12,
+      "notes": "Test handling of international names, accents, and languages"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "created_date": "2024-01-18",
+    "total_test_cases": 8,
+    "purpose": "Golden test dataset for evaluation suite - covers happy path and edge cases",
+    "categories": {
+      "happy_path": 1,
+      "sparse_cv": 1,
+      "long_requirements": 1,
+      "skill_mismatch": 1,
+      "overqualified": 1,
+      "ambiguous_data": 1,
+      "quantitative_verification": 1,
+      "special_characters": 1
+    }
+  }
+}
