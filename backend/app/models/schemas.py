@@ -2,6 +2,17 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 
 
+class CVSuggestion(BaseModel):
+    section: str = Field(..., description="CV section, e.g. Experience, Skills, Projects, Summary")
+    before: str = Field(..., description="Exact snippet copied from the original CV text")
+    after: str = Field(..., description="Improved snippet grounded in fact_table")
+    rationale: str = Field(..., description="Why this helps match the JD")
+    grounded_sources: List[str] = Field(default_factory=list, description="Pointers into fact_table items supporting the suggestion")
+
+class CVEnhancement(BaseModel):
+    suggestions: List[CVSuggestion] = Field(default_factory=list)
+
+
 class HealthResponse(BaseModel):
     status: str = "ok"
 
