@@ -30,7 +30,7 @@ from backend.mlops.eval.evaluation_suite import (
     TestCaseResult,
     AggregateMetrics
 )
-from app.models.schemas import ExtractedFacts, KeyFact, AuditReport, ClaimVerification
+from backend.app.models.schemas import ExtractedFacts, KeyFact, AuditReport, ClaimVerification
 
 
 # =============================================================================
