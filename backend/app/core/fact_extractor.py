@@ -8,9 +8,9 @@ import logging
 import mlflow
 from pydantic import ValidationError
 
-from app.core.prompts import PromptVersion, Prompts
-from app.services.llm_service import LLMService
-from app.models.schemas import ExtractedFacts
+from backend.app.core.prompts import PromptVersion, Prompts
+from backend.app.services.llm_service import LLMService
+from backend.app.models.schemas import ExtractedFacts
 
 logger = logging.getLogger(__name__)
 
@@ -75,16 +75,22 @@ class FactExtractor:
 
                 # Parse JSON response
                 raw_content = response["content"]
+                
+                # Clean up potential Markdown formatting (common with Gemini)
+                if raw_content.strip().startswith("```"):
+                    # Remove opening ```json or ```
+                    raw_content = raw_content.split("\n", 1)[1]
+                    # Remove closing ```
+                    if raw_content.strip().endswith("```"):
+                        raw_content = raw_content.rsplit("```", 1)[0]
+                
                 try:
                     parsed_json = json.loads(raw_content)
                 except json.JSONDecodeError as e:
-                    logger.error(
-                        f"Failed to parse LLM response as JSON: {e}"
-                    )
+                    logger.error(f"Failed to parse LLM response as JSON: {e}")
                     logger.error(f"Raw response: {raw_content[:500]}")
                     mlflow.log_text(raw_content, "failed_response.txt")
-                    msg = f"LLM returned invalid JSON: {str(e)}"
-                    raise FactExtractionError(msg)
+                    raise FactExtractionError(f"LLM returned invalid JSON: {str(e)}")
 
                 # Validate against Pydantic schema
                 try:

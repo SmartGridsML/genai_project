@@ -7,8 +7,8 @@ import pytest
 import json
 from unittest.mock import MagicMock, patch
 
-from app.core.fact_extractor import FactExtractor, FactExtractionError
-from app.models.schemas import ExtractedFacts
+from backend.app.core.fact_extractor import FactExtractor, FactExtractionError
+from backend.app.models.schemas import ExtractedFacts
 
 
 # Test data fixtures
@@ -80,7 +80,7 @@ class TestFactExtractorInit:
 class TestFactExtractorHappyPath:
     """Test successful fact extraction scenarios."""
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_valid_cv(
         self,
         mock_mlflow,
@@ -128,7 +128,7 @@ class TestFactExtractorHappyPath:
         mock_mlflow.log_param.assert_called()
         mock_mlflow.log_metric.assert_called()
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_with_request_id(
         self,
         mock_mlflow,
@@ -152,7 +152,7 @@ class TestFactExtractorHappyPath:
         # Verify request_id was logged
         # (You'd need to check the specific call in a real test)
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_empty_facts_list(
         self,
         mock_mlflow,
@@ -200,7 +200,7 @@ class TestFactExtractorErrorHandling:
 
         assert "cannot be empty" in str(exc_info.value)
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_invalid_json_response(
         self,
         mock_mlflow,
@@ -227,7 +227,7 @@ class TestFactExtractorErrorHandling:
         # Verify error was logged to MLflow
         mock_mlflow.log_text.assert_called()
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_wrong_schema(
         self,
         mock_mlflow,
@@ -257,7 +257,7 @@ class TestFactExtractorErrorHandling:
         # Verify invalid schema was logged
         mock_mlflow.log_text.assert_called()
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_missing_required_fields(
         self,
         mock_mlflow,
@@ -290,7 +290,7 @@ class TestFactExtractorErrorHandling:
 
         assert "doesn't match schema" in str(exc_info.value)
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_llm_service_failure(
         self,
         mock_mlflow,
@@ -314,7 +314,7 @@ class TestFactExtractorErrorHandling:
 class TestFactExtractorMLflowLogging:
     """Test MLflow logging functionality."""
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_logs_extraction_parameters(
         self,
         mock_mlflow,
@@ -337,7 +337,7 @@ class TestFactExtractorMLflowLogging:
         assert mock_mlflow.log_param.call_count >= 3
         mock_mlflow.log_metric.assert_called()
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_logs_fact_metrics(
         self,
         mock_mlflow,
@@ -359,7 +359,7 @@ class TestFactExtractorMLflowLogging:
         mock_mlflow.log_metric.assert_called()
         # Check that both facts_extracted and avg_confidence were logged
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_logs_category_distribution(
         self,
         mock_mlflow,
@@ -384,7 +384,7 @@ class TestFactExtractorMLflowLogging:
 class TestFactExtractorEdgeCases:
     """Test edge cases and boundary conditions."""
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_very_long_cv(
         self,
         mock_mlflow,
@@ -407,7 +407,7 @@ class TestFactExtractorEdgeCases:
         # Verify CV length was logged
         mock_mlflow.log_param.assert_called()
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_special_characters(
         self,
         mock_mlflow,
@@ -428,7 +428,7 @@ class TestFactExtractorEdgeCases:
         # Assert
         assert isinstance(result, ExtractedFacts)
 
-    @patch('app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.mlflow')
     def test_extract_confidence_boundary_values(
         self,
         mock_mlflow,
@@ -476,8 +476,8 @@ class TestFactExtractorIntegration:
     the interaction between components.
     """
 
-    @patch('app.core.fact_extractor.mlflow')
-    @patch('app.core.fact_extractor.Prompts')
+    @patch('backend.app.core.fact_extractor.mlflow')
+    @patch('backend.app.core.fact_extractor.Prompts')
     def test_uses_correct_prompt_version(
         self,
         mock_prompts,
