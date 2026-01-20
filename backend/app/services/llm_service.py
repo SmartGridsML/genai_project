@@ -24,21 +24,39 @@ logger = logging.getLogger(__name__)
 
 class LLMService:
     def __init__(self):
-        # We initialize the client once. 
-        # Accessing the SecretStr value requires .get_secret_value()
         self.settings = get_settings()
-        if self.settings.openai_api_key is None:
-            raise RuntimeError("OPENAI_API_KEY is required for LLM calls")
 
-        self.client = OpenAI(api_key=self.settings.openai_api_key.get_secret_value())
+        # Don't fail at import / construction time.
+        # We'll validate only when an actual API call happens.
+        self._api_key = (
+            self.settings.openai_api_key.get_secret_value()
+            if self.settings.openai_api_key is not None
+            else None
+        )
+
+        self.client = None  # lazy init
 
         self.model = self.settings.openai_model
-        # Cache the encoding to avoid re-loading it every call
-        self.encoding = tiktoken.encoding_for_model("gpt-4") # Fallback for most models
+        self.encoding = tiktoken.encoding_for_model("gpt-4")  # fallback-ish
 
-        # Initialize MLflow experiment
-        mlflow.set_tracking_uri(self.settings.mlflow_tracking_uri)
-        mlflow.set_experiment(self.settings.experiment_name)
+        # MLflow init is generally fine, but keep it non-fatal for unit tests.
+        try:
+            mlflow.set_tracking_uri(self.settings.mlflow_tracking_uri)
+            mlflow.set_experiment(self.settings.experiment_name)
+        except Exception as e:
+            logger.warning(f"MLflow init failed (continuing): {e}")
+
+    def _require_openai(self) -> None:
+        if not self._api_key:
+            raise RuntimeError("OPENAI_API_KEY is required for LLM calls")
+
+    def _get_client(self) -> OpenAI:
+        if self.client is None:
+            self._require_openai()
+            self.client = OpenAI(api_key=self._api_key)
+        return self.client
+
+
 
     def count_tokens(self, text: str) -> int:
         """
@@ -82,7 +100,8 @@ class LLMService:
                 mlflow.log_param("temperature", temperature)
                 mlflow.log_param("input_tokens", input_tokens)
                 
-                response = self.client.chat.completions.create(
+                client = self._get_client()
+                response = client.chat.completions.create(
                     model=self.model,
                     messages=[
                         {"role": "system", "content": system_prompt},
