@@ -1,5 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from starlette import status
+import json
+import logging
+import time
+from uuid import uuid4
 
 from app.core.document_parser import parse_cv
 
@@ -8,17 +12,25 @@ from fastapi import Request, Form
 from app.config import settings
 from app.services.cache_service import CacheService
 from app.services.llm_client import LLMClient
+from app.core.cv_enhancer import CVEnhancer
+from app.services.llm_service import LLMService
+from app.core.auditor import Auditor
+
 
 router = APIRouter(prefix="/applications", tags=["applications"])
+logger = logging.getLogger(__name__)
+
 def get_cache() -> CacheService:
     return CacheService(settings.redis_url)
 
 def get_llm_client() -> LLMClient:
     return LLMClient(settings.llm_base_url)
 
-
 def _sha256(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
+
+def _log_event(payload: dict) -> None:
+    logger.info(json.dumps(payload))
 
 
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
@@ -102,17 +114,81 @@ async def generate_application(
         cache.set_json(jd_cache_key, jd, ttl_seconds=settings.cache_ttl_seconds)
 
     # 4) cover letter
+    t0 = time.perf_counter()
     cover = await llm.generate_cover_letter(facts=facts, jd=jd, tone=tone)
+    _log_event({"event": "stage_complete", "stage": "cover_letter", "ms": round((time.perf_counter()-t0)*1000, 2)})
 
-    request_id = getattr(request.state, "request_id", None)
+    request_id = getattr(request.state, "request_id", None) or str(uuid4())
 
+    cover_letter_text = cover.get("cover_letter", "")
+
+    # 5) audit report (Person A Thursday)
+    # If auditor is not ready/exposed, you can temporarily set audit_report = []
+    t0 = time.perf_counter()
+    try:
+        auditor = Auditor(llm_service=LLMService())
+        audit_report = auditor.audit_cover_letter(cover_letter=cover_letter_text, facts=facts)
+    except Exception as e:
+        audit_report = [{"error": str(e)}]
+    _log_event({"event": "stage_complete", "stage": "audit", "request_id": request_id, "ms": round((time.perf_counter()-t0)*1000, 2)})
+
+    # 6) cv enhancement
+    t0 = time.perf_counter()
+    try:
+        enhancer = CVEnhancer(llm_service=LLMService())
+        # Use full raw text for "before" snippets to match exactly
+        original_cv_text = parsed.raw_text
+        cv_patches = enhancer.enhance(
+            original_cv_text=original_cv_text,
+            fact_table=facts,
+            jd_requirements=jd,
+            max_suggestions=8,
+        )
+        cv_suggestions = [
+            {
+                "section": p.section,
+                "before": p.before,
+                "after": p.after,
+                "rationale": p.rationale,
+                "grounded_sources": p.grounded_sources,
+                "diff_unified": p.diff_unified,
+            }
+            for p in cv_patches
+        ]
+    except Exception as e:
+        cv_suggestions = [{"error": str(e)}]
+
+    _log_event({"event": "stage_complete", "stage": "cv_enhance", "request_id": request_id, "ms": round((time.perf_counter()-t0)*1000, 2)})
+
+    # 7) store results
+    t0 = time.perf_counter()
+    result_blob = {
+        "request_id": request_id,
+        "filename": file.filename,
+        "cv_hash": cv_hash,
+        "jd_hash": jd_hash,
+        "tone": tone,
+        "cover_letter": cover_letter_text,
+        "audit_report": audit_report,
+        "cv_suggestions": cv_suggestions,
+    }
+    cache.set_json(f"application:result:{request_id}", result_blob, ttl_seconds=settings.cache_ttl_seconds)
+    _log_event({"event": "stage_complete", "stage": "store_results", "request_id": request_id, "ms": round((time.perf_counter()-t0)*1000, 2)})
+
+    # Keep response small; fetch full payload via /applications/{id}/results
     return {
         "request_id": request_id,
         "filename": file.filename,
         "cv_hash": cv_hash,
         "jd_hash": jd_hash,
         "tone": tone,
-        "cover_letter": cover.get("cover_letter", ""),
-        "facts": facts,  # keep for debugging; you can remove later
-        "jd": jd,        # keep for debugging; you can remove later
     }
+
+
+@router.get("/{request_id}/results")
+async def get_application_results(request_id: str):
+    cache = get_cache()
+    data = cache.get_json(f"application:result:{request_id}")
+    if not data:
+        raise HTTPException(status_code=404, detail="Results not found (expired or invalid request id)")
+    return data
