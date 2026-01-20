@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.models.llm_contracts import (
+from backend.app.models.llm_contracts import (
     FactExtractRequest,
     FactExtractResponse,
     JDAnalyzeRequest,
@@ -10,9 +10,9 @@ from app.models.llm_contracts import (
     CoverLetterRequest,
     CoverLetterResponse,
 )
-from app.core.jd_analyzer import analyze_job_description
-from app.core.cover_letter_gen import generate_cover_letter
-from app.services.llm_service import get_llm_service
+from backend.app.core.jd_analyzer import analyze_job_description
+from backend.app.core.cover_letter_gen import generate_cover_letter
+from backend.app.services.llm_service import get_llm_service
 
 router = APIRouter(tags=["llm"])
 

@@ -5,8 +5,8 @@ import difflib
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
-from app.core.prompts import Prompts, PromptVersion
-from app.models.schemas import CVEnhancement
+from backend.app.core.prompts import Prompts, PromptVersion
+from backend.app.models.schemas import CVEnhancement
 
 
 class CVEnhancerError(RuntimeError):

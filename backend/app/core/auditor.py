@@ -366,4 +366,4 @@ FACTS:
 
 
 # Singleton instance
-#auditor = Auditor()
+auditor = Auditor()

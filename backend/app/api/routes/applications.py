@@ -5,16 +5,16 @@ import logging
 import time
 from uuid import uuid4
 
-from app.core.document_parser import parse_cv
+from backend.app.core.document_parser import parse_cv
 
 import hashlib
 from fastapi import Request, Form
-from app.config import settings
-from app.services.cache_service import CacheService
-from app.services.llm_client import LLMClient
-from app.core.cv_enhancer import CVEnhancer
-from app.services.llm_service import LLMService
-from app.core.auditor import Auditor
+from backend.app.config import settings
+from backend.app.services.cache_service import CacheService
+from backend.app.services.llm_client import LLMClient
+from backend.app.core.cv_enhancer import CVEnhancer
+from backend.app.services.llm_service import LLMService
+from backend.app.core.auditor import Auditor
 
 
 router = APIRouter(prefix="/applications", tags=["applications"])

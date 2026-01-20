@@ -1,5 +1,5 @@
 import pytest
-from app.core.document_parser import split_into_sections
+from backend.app.core.document_parser import split_into_sections
 
 
 def test_split_into_sections_detects_basic_headings():
