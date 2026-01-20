@@ -154,6 +154,15 @@ class Auditor:
             )
 
             raw_content = response["content"]
+            
+            # Clean up potential Markdown formatting (common with Gemini)
+            if raw_content.strip().startswith("```"):
+                # Remove opening ```json or ```
+                raw_content = raw_content.split("\n", 1)[1]
+                # Remove closing ```
+                if raw_content.strip().endswith("```"):
+                    raw_content = raw_content.rsplit("```", 1)[0]
+            
             parsed_json = json.loads(raw_content)
 
             # Validate response structure
@@ -172,6 +181,9 @@ class Auditor:
             claims = [c.strip() for c in claims if c and c.strip()]
 
             logger.info(f"Extracted {len(claims)} claims")
+            if len(claims) == 0:
+                logger.warning(f"No claims extracted! Raw response: {raw_content[:500]}")
+                mlflow.log_text(raw_content, "empty_claims_response.txt")
             mlflow.log_text(
                 json.dumps(claims, indent=2),
                 "extracted_claims.json"
@@ -231,6 +243,15 @@ FACTS:
                 )
 
                 raw_content = response["content"]
+
+                # Clean up potential Markdown formatting (common with Gemini)
+                if raw_content.strip().startswith("```"):
+                    # Remove opening ```json or ```
+                    raw_content = raw_content.split("\n", 1)[1]
+                    # Remove closing ```
+                    if raw_content.strip().endswith("```"):
+                        raw_content = raw_content.rsplit("```", 1)[0]
+
                 parsed_json = json.loads(raw_content)
 
                 # Create verification object
