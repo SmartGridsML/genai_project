@@ -1,7 +1,7 @@
 services:
   backend:
     build:
-      context: ../backend
+      context: ..
     container_name: cv-helper-backend
     ports:
       - "8000:8000"
@@ -13,14 +13,15 @@ services:
       - redis
       - postgres
     volumes:
-      - ../backend/app:/app/app  # live-edit app code
+      - ..:/app
+    working_dir: /app
 
   tests:
     build:
-      context: ../backend
+      context: ..
     working_dir: /app
     volumes:
-      - ../backend:/app
+      - ..:/app
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
@@ -28,7 +29,8 @@ services:
     depends_on:
       - redis
       - postgres
-    command: ["python", "-m", "pytest", "-q"]
+    command: ["python", "-m", "pytest", "-q", "backend/tests"]
+
 
   redis:
     image: redis:7-alpine

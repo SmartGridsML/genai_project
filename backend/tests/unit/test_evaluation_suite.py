@@ -31,6 +31,7 @@ from backend.mlops.eval.evaluation_suite import (
     AggregateMetrics
 )
 from backend.app.models.schemas import ExtractedFacts, KeyFact, AuditReport, ClaimVerification
+from backend.mlops.eval.evaluation_suite import run_single_test, EvaluationSuite
 
 
 # =============================================================================

@@ -4,6 +4,7 @@ import json
 import logging
 import time
 from uuid import uuid4
+from functools import lru_cache
 
 from backend.app.core.document_parser import parse_cv
 
@@ -14,7 +15,8 @@ from backend.app.services.cache_service import CacheService
 from backend.app.services.llm_client import LLMClient
 from backend.app.core.cv_enhancer import CVEnhancer
 from backend.app.services.llm_service import LLMService
-from backend.app.core.auditor import Auditor
+from backend.app.core.auditor import get_auditor
+from backend.app.models.schemas import ExtractedFacts
 
 
 router = APIRouter(prefix="/applications", tags=["applications"])
@@ -32,6 +34,9 @@ def _sha256(b: bytes) -> str:
 def _log_event(payload: dict) -> None:
     logger.info(json.dumps(payload))
 
+@lru_cache
+def get_llm_service() -> LLMService:
+    return LLMService()
 
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
 
@@ -126,16 +131,25 @@ async def generate_application(
     # If auditor is not ready/exposed, you can temporarily set audit_report = []
     t0 = time.perf_counter()
     try:
-        auditor = Auditor(llm_service=LLMService())
-        audit_report = auditor.audit_cover_letter(cover_letter=cover_letter_text, facts=facts)
+        auditor = get_auditor()
+        facts_model = ExtractedFacts.model_validate(facts)
+
+        audit_report_obj = auditor.audit(
+            cover_letter=cover_letter_text,
+            fact_table=facts_model,
+            request_id=request_id,
+        )
+        audit_report = audit_report_obj.model_dump()
     except Exception as e:
-        audit_report = [{"error": str(e)}]
+        audit_report = {"error": str(e)}
+
+
     _log_event({"event": "stage_complete", "stage": "audit", "request_id": request_id, "ms": round((time.perf_counter()-t0)*1000, 2)})
 
     # 6) cv enhancement
     t0 = time.perf_counter()
     try:
-        enhancer = CVEnhancer(llm_service=LLMService())
+        enhancer = CVEnhancer(llm_service=get_llm_service())
         # Use full raw text for "before" snippets to match exactly
         original_cv_text = parsed.raw_text
         cv_patches = enhancer.enhance(
@@ -171,7 +185,9 @@ async def generate_application(
         "cover_letter": cover_letter_text,
         "audit_report": audit_report,
         "cv_suggestions": cv_suggestions,
+        "cv_raw_text": parsed.raw_text,
     }
+
     cache.set_json(f"application:result:{request_id}", result_blob, ttl_seconds=settings.cache_ttl_seconds)
     _log_event({"event": "stage_complete", "stage": "store_results", "request_id": request_id, "ms": round((time.perf_counter()-t0)*1000, 2)})
 
