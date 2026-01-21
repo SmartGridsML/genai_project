@@ -5,6 +5,7 @@ from backend.app.api.routes.health import router as health_router
 from backend.app.api.routes.applications import router as applications_router
 from backend.app.utils.request_id import RequestIDMiddleware
 from backend.app.api.routes.llm import router as llm_router
+from backend.app.api.routes.downloads import router as downloads_router
 
 
 def create_app() -> FastAPI:
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(applications_router)
     app.include_router(llm_router)
+    app.include_router(downloads_router)
     return app
 
 
