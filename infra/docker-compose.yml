@@ -1,34 +1,37 @@
 services:
   backend:
     build:
-      context: ../backend
+      context: ..
     container_name: cv-helper-backend
     ports:
       - "8000:8000"
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
-      - LLM_BASE_URL=http://backend:8000
+      - LLM_BASE_URL=
     depends_on:
       - redis
       - postgres
     volumes:
-      - ../backend/app:/app/app  # live-edit app code
+      - ..:/app
+    working_dir: /app
 
   tests:
     build:
-      context: ../backend
+      context: ..
     working_dir: /app
     volumes:
-      - ../backend:/app
+      - ..:/app
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - LLM_BASE_URL=
     depends_on:
       - redis
       - postgres
-    command: ["python", "-m", "pytest", "-q"]
+    command: ["python", "-m", "pytest", "-q", "backend/tests"]
+
 
   redis:
     image: redis:7-alpine
