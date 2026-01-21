@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from backend.app.core.prompts import PromptVersion, Prompts
 from backend.app.services.llm_service import LLMService
+from backend.app.services.null_llm import NullLLMService
 from backend.app.models.schemas import ExtractedFacts
 
 logger = logging.getLogger(__name__)
@@ -25,8 +26,13 @@ class FactExtractor:
 
     def __init__(self, llm_service: LLMService = None):
         """Initialize with optional LLM service for dependency injection."""
-        self.llm = llm_service or LLMService()
+        self.llm = llm_service or NullLLMService()
         self.version = PromptVersion.V1
+
+    def _get_llm(self) -> LLMService:
+        if self.llm is None:
+            self.llm = LLMService()
+        return self.llm
 
     def extract(
         self,
@@ -65,7 +71,7 @@ class FactExtractor:
                 # Call LLM with JSON mode
                 cv_len = len(cv_text)
                 logger.info(f"Extracting facts from CV (length: {cv_len})")
-                response = self.llm.generate_response(
+                response = self._get_llm().generate_response(
                     system_prompt=system_prompt,
                     user_prompt=cv_text,
                     temperature=0.3,  # Lower temp for consistency
@@ -147,4 +153,9 @@ class FactExtractor:
 
 
 # Singleton instance for easy import
-fact_extractor = FactExtractor()
+#fact_extractor = FactExtractor()
+from functools import lru_cache
+
+@lru_cache
+def get_fact_extractor() -> "FactExtractor":
+    return FactExtractor()

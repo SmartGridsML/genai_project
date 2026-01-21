@@ -45,3 +45,7 @@ class LLMClient:
             )
             r.raise_for_status()
             return r.json()
+
+def get_llm_client() -> "LLMClient":
+    # Single place that decides how the client is constructed in production
+    return LLMClient()

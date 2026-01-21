@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -r requirements.txt
+
+      # - name: Black (format check)
+      #   run: |
+      #     black --check .
+
+      # - name: Flake8 (lint)
+      #   run: |
+      #     flake8 .
+
+      # - name: Mypy (type check)
+      #   run: |
+      #     mypy .
+
+      - name: Pytest
+        env:
+          # Prevent MLflow from trying to talk to a remote server in CI
+          MLFLOW_TRACKING_URI: "file:/tmp/mlruns"
+          # If your settings require these keys to exist, provide harmless placeholders:
+          OPENAI_API_KEY: "test"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY}}
+          # If your app reads LLM_BASE_URL in tests:
+          LLM_BASE_URL: "http://localhost:9999"
+          # If Redis URL is required by settings but tests mock it:
+          REDIS_URL: "redis://localhost:6379/0"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
+        run: |
+          pytest -q
+
