@@ -51,7 +51,7 @@ jobs:
           MLFLOW_TRACKING_URI: "file:/tmp/mlruns"
           # If your settings require these keys to exist, provide harmless placeholders:
           OPENAI_API_KEY: "test"
-          GEMINI_API_KEY: "test"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY}}
           # If your app reads LLM_BASE_URL in tests:
           LLM_BASE_URL: "http://localhost:9999"
           # If Redis URL is required by settings but tests mock it:
