@@ -16,12 +16,14 @@ Author: Person A
 import json
 import logging
 from typing import List
+from functools import lru_cache
 
 import mlflow
 from pydantic import ValidationError
 
 from backend.app.core.prompts import PromptVersion, Prompts
 from backend.app.services.llm_service import LLMService
+from backend.app.services.null_llm import NullLLMService
 from backend.app.models.schemas import (
     ExtractedFacts,
     ClaimVerification,
@@ -55,8 +57,14 @@ class Auditor:
 
     def __init__(self, llm_service: LLMService = None):
         """Initialize with optional LLM service for dependency injection."""
-        self.llm = llm_service or LLMService()
+        self.llm = llm_service or NullLLMService()
         self.version = PromptVersion.V1
+
+    def _get_llm(self) -> LLMService:
+        if self.llm is None:
+            self.llm = LLMService()
+        return self.llm
+
 
     def audit(
         self,
@@ -145,7 +153,7 @@ class Auditor:
         system_prompt = Prompts.get_claim_extraction_system(self.version)
 
         try:
-            response = self.llm.generate_response(
+            response = self._get_llm().generate_response(
                 system_prompt=system_prompt,
                 user_prompt=cover_letter,
                 temperature=0.2,  # Low temp for consistency
@@ -234,7 +242,7 @@ FACTS:
 """
 
             try:
-                response = self.llm.generate_response(
+                response = self._get_llm().generate_response(
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     temperature=0.1,  # Very low temp for strict verification
@@ -366,4 +374,8 @@ FACTS:
 
 
 # Singleton instance
-auditor = Auditor()
+#auditor = Auditor()
+
+@lru_cache
+def get_auditor() -> "Auditor":
+    return Auditor()

@@ -17,11 +17,21 @@ import time
 from typing import Dict, Any, Optional
 from enum import Enum
 
-import tiktoken
+try:
+    import tiktoken  # type: ignore
+except Exception:
+    tiktoken = None  # type: ignore
+
 import mlflow
-from langchain_openai import ChatOpenAI
+
+try:
+    from langchain_openai import ChatOpenAI  # type: ignore
+except ModuleNotFoundError:
+    ChatOpenAI = None  # type: ignore
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
+
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -69,8 +79,15 @@ class LLMService:
                 "No LLM providers configured. Set OPENAI_API_KEY or GEMINI_API_KEY"
             )
 
-        # Token encoding for cost estimation
-        self.encoding = tiktoken.encoding_for_model("gpt-4")
+        # Token encoding for cost estimation (must never prevent service startup)
+        self.encoding = None
+        if tiktoken is not None:
+            try:
+                self.encoding = tiktoken.encoding_for_model("gpt-4")
+            except Exception as e:
+                logger.warning(f"tiktoken unavailable/broken ({e}); using fallback token counting.")
+                self.encoding = None
+
 
         # Initialize MLflow
         mlflow.set_tracking_uri(self.settings.mlflow_tracking_uri)
@@ -123,13 +140,21 @@ class LLMService:
     def count_tokens(self, text: str) -> int:
         """
         Estimate token count for cost tracking.
-        Note: Approximation for both OpenAI and Gemini.
+        Falls back to a deterministic heuristic if tiktoken is unavailable/broken.
         """
-        try:
-            return len(self.encoding.encode(text))
-        except Exception as e:
-            logger.warning(f"Token counting failed: {e}. Using word estimate.")
-            return int(len(text.split()) * 1.3)
+        if not text:
+            return 0
+
+        if self.encoding is not None:
+            try:
+                return len(self.encoding.encode(text))
+            except Exception as e:
+                logger.warning(f"Token counting failed with tiktoken: {e}. Falling back.")
+
+        # Fallback heuristic: count word-ish chunks + punctuation (stable)
+        import re
+        return len(re.findall(r"\w+|[^\w\s]", text, flags=re.UNICODE))
+
 
     def _call_openai(
         self,
