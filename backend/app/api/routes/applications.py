@@ -12,7 +12,8 @@ import hashlib
 from fastapi import Request, Form
 from backend.app.config import settings
 from backend.app.services.cache_service import CacheService
-from backend.app.services.llm_client import LLMClient
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Form, Depends
+from backend.app.services.llm_client import LLMClient, get_llm_client
 from backend.app.core.cv_enhancer import CVEnhancer
 from backend.app.services.llm_service import LLMService
 from backend.app.core.auditor import get_auditor
@@ -24,9 +25,6 @@ logger = logging.getLogger(__name__)
 
 def get_cache() -> CacheService:
     return CacheService(settings.redis_url)
-
-def get_llm_client() -> LLMClient:
-    return LLMClient(settings.llm_base_url)
 
 def _sha256(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
@@ -76,6 +74,7 @@ async def generate_application(
     file: UploadFile = File(...),
     job_description: str = Form(..., min_length=20),
     tone: str = Form("professional"),
+    llm: LLMClient = Depends(get_llm_client),
 ):
     filename = (file.filename or "").lower()
 
@@ -106,7 +105,6 @@ async def generate_application(
 
     # 2) facts (cached)
     cache = get_cache()
-    llm = get_llm_client()
     facts = cache.get_json(facts_cache_key)
     if facts is None:
         facts = await llm.extract_facts(parsed.sections)
