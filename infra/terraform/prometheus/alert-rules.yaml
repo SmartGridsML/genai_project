@@ -1,0 +1,20 @@
+groups:
+  - name: genai-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(application_requests_total{status="failure"}[5m]) / rate(application_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate"
+          description: "Error rate above 5% for 5 minutes."
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(application_latency_seconds_bucket[5m])) by (le)) > 30
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High request latency"
+          description: "P95 latency above 30s for 5 minutes."
