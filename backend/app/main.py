@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.routes.health import router as health_router
 from backend.app.api.routes.applications import router as applications_router
 from backend.app.utils.request_id import RequestIDMiddleware
+from backend.app.utils.rate_limiter import rate_limit_middleware
 from backend.app.api.routes.llm import router as llm_router
 from backend.app.api.routes.downloads import router as downloads_router
 
@@ -12,6 +13,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="CV Application Helper API", version="0.1.0")
 
     app.add_middleware(RequestIDMiddleware)
+    app.middleware("http")(rate_limit_middleware)
 
     app.add_middleware(
         CORSMiddleware,

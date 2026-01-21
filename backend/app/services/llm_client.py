@@ -1,6 +1,8 @@
 from typing import Any, Dict
 import httpx
 
+from backend.app.config import settings
+
 # Note: The endpoints /fact-extract, /jd-analyze, /cover-letter are placeholders. When Person A finishes their FastAPI routes, you align names.
 
 class LLMClient:
@@ -9,7 +11,7 @@ class LLMClient:
     For now, it can run in stub mode if LLM_BASE_URL is not set.
     """
 
-    def __init__(self, base_url: str | None):
+    def __init__(self, base_url: str | None = None):
         self.base_url = base_url.rstrip("/") if base_url else None
 
     async def extract_facts(self, cv_sections: Dict[str, str]) -> Dict[str, Any]:
@@ -48,4 +50,4 @@ class LLMClient:
 
 def get_llm_client() -> "LLMClient":
     # Single place that decides how the client is constructed in production
-    return LLMClient()
+    return LLMClient(settings.llm_base_url)

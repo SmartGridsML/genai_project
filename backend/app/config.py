@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = int(24 * 3600)
     llm_base_url: str = "http://localhost:8000"
 
+    # Rate limiting
+    rate_limit_ip_per_hour: int = 10
+    rate_limit_user_per_hour: int = 50
+    rate_limit_window_seconds: int = 3600
+    rate_limit_enabled: bool = True
+    celery_always_eager: bool = False
+
     # LLM Configuration
     # NOTE: keep it optional for import-time, enforce at call-time.
     openai_api_key: SecretStr | None = Field(default=None, description="Primary LLM provider")
