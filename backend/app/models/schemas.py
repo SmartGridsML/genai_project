@@ -24,9 +24,9 @@ class ErrorResponse(BaseModel):
 
 # Placeholder for Day-2/3 endpoints
 class ApplicationGenerateRequest(BaseModel):
+    cv_text: str = Field(..., min_length=20, description="Extracted CV text (from /applications/parse)")
     job_description: str = Field(..., min_length=20)
     tone: Optional[str] = Field(default="professional")
-    # later: cv_file upload handled via multipart/form-data
 
 
 class ApplicationGenerateResponse(BaseModel):
