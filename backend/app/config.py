@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
     database_url: str = "postgresql://localhost:5432/postgres"
     cache_ttl_seconds: int = int(24 * 3600)
-    llm_base_url: str = "http://localhost:8000"
+    llm_base_url: str = "https://api.openai.com/v1"
 
     # LLM Configuration
     # NOTE: keep it optional for import-time, enforce at call-time.
