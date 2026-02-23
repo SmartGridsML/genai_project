@@ -6,6 +6,10 @@ import type { Stage } from "../components/ProgressIndicator";
 import { generateApplication, parseCv, pollResults } from "../api/applications";
 import type { ResultsResponse } from "../api/applications";
 import type { ApiError } from "../api/client";
+import ResultsViewer from "../components/ResultsViewer";
+import DiffViewer from "../components/DiffViewer";
+import DownloadButton from "../components/DownloadButton";
+
 
 export function Home() {
   const [cvText, setCvText] = useState("");
@@ -13,6 +17,7 @@ export function Home() {
   const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ResultsResponse | null>(null);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => cvText.trim().length > 0 && jd.trim().length > 0, [cvText, jd]);
 
@@ -20,6 +25,7 @@ export function Home() {
     setError(null);
     setResults(null);
     setStage("parsing_cv");
+    setApplicationId(null);
     try {
       const parsed = await parseCv(file);
       setCvText(parsed.parsed_text ?? "");
@@ -33,13 +39,14 @@ export function Home() {
   async function onGenerate() {
     setError(null);
     setResults(null);
-
+    setApplicationId(null);
     try {
       setStage("extracting_facts");
       setStage("analyzing_jd");
       setStage("generating_letter");
 
       const gen = await generateApplication({ cv_text: cvText, job_description: jd });
+      setApplicationId(gen.application_id);
 
       setStage("auditing");
       const res = await pollResults(gen.application_id);
@@ -102,29 +109,26 @@ export function Home() {
       </div>
 
       {results?.status === "done" && (
-        <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border p-5">
-            <h2 className="text-lg font-semibold">Cover Letter</h2>
-            <pre className="mt-3 whitespace-pre-wrap text-sm">{results.cover_letter}</pre>
-          </div>
+        <div className="mt-8 grid gap-6">
+          {applicationId && (
+            <DownloadButton
+              applicationId={applicationId}
+              apiBaseUrl={import.meta.env.VITE_API_BASE_URL}
+            />
+          )}
 
-          <div className="rounded-2xl border p-5">
-            <h2 className="text-lg font-semibold">Audit Report</h2>
-            <div className="mt-3 space-y-3">
-              {(results.audit_report ?? []).slice(0, 20).map((a, idx) => (
-                <div key={idx} className="rounded-xl border p-3">
-                  <p className="text-sm font-medium">{a.claim}</p>
-                  <p className="mt-1 text-xs text-gray-700">
-                    {a.supported ? "Supported" : "UNSUPPORTED"} • {a.source} • conf{" "}
-                    {a.confidence.toFixed(2)}
-                  </p>
-                </div>
-              ))}
-              {(results.audit_report ?? []).length === 0 && (
-                <p className="text-sm text-gray-600">No audit items returned.</p>
-              )}
-            </div>
-          </div>
+          <ResultsViewer
+            coverLetter={results.cover_letter ?? ""}
+            audit={(results.audit_report ?? []).map((a) => ({
+              claim: a.claim,
+              supported: a.supported,
+              source: a.source,
+              confidence: a.confidence,
+            }))}
+          />
+
+          {/* Enable once backend provides suggestions */}
+          <DiffViewer suggestions={[]} />
         </div>
       )}
     </div>

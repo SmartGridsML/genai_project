@@ -68,37 +68,23 @@ async def parse_application_cv(file: UploadFile = File(...)):
         "raw_text_preview": parsed.raw_text[:1000],  # preview only; avoids huge responses
     }
 
+from backend.app.models.schemas import ApplicationGenerateRequest
 @router.post("/generate")
 async def generate_application(
     request: Request,
-    file: UploadFile = File(...),
-    job_description: str = Form(..., min_length=20),
-    tone: str = Form("professional"),
+    body: ApplicationGenerateRequest,
     llm: LLMClient = Depends(get_llm_client),
 ):
-    filename = (file.filename or "").lower()
+    cv_text = body.cv_text
+    job_description = body.job_description
+    tone = body.tone or "professional"
+    filename = "cv_text.txt"
 
-    if not (filename.endswith(".pdf") or filename.endswith(".docx")):
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Only .pdf and .docx files are supported.",
-        )
-
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="File too large. Max size is 5MB.",
-        )
-
-    # 1) Parse CV
-    try:
-        parsed = parse_cv(content, filename=filename)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    # Build "sections" input expected by extractor
+    sections = {"raw": cv_text}
 
     # cache keys
-    cv_hash = _sha256(content)
+    cv_hash = _sha256(cv_text.encode("utf-8"))
     jd_hash = _sha256(job_description.encode("utf-8"))
     facts_cache_key = f"facts:{cv_hash}"
     jd_cache_key = f"jd:{jd_hash}"
@@ -107,7 +93,7 @@ async def generate_application(
     cache = get_cache()
     facts = cache.get_json(facts_cache_key)
     if facts is None:
-        facts = await llm.extract_facts(parsed.sections)
+        facts = await llm.extract_facts(sections)
         cache.set_json(facts_cache_key, facts, ttl_seconds=settings.cache_ttl_seconds)
 
     # 3) jd analysis (cached)
@@ -115,6 +101,7 @@ async def generate_application(
     if jd is None:
         jd = await llm.analyze_jd(job_description)
         cache.set_json(jd_cache_key, jd, ttl_seconds=settings.cache_ttl_seconds)
+
 
     # 4) cover letter
     t0 = time.perf_counter()
@@ -148,8 +135,7 @@ async def generate_application(
     t0 = time.perf_counter()
     try:
         enhancer = CVEnhancer(llm_service=get_llm_service())
-        # Use full raw text for "before" snippets to match exactly
-        original_cv_text = parsed.raw_text
+        original_cv_text = cv_text
         cv_patches = enhancer.enhance(
             original_cv_text=original_cv_text,
             fact_table=facts,
@@ -172,19 +158,20 @@ async def generate_application(
 
     _log_event({"event": "stage_complete", "stage": "cv_enhance", "request_id": request_id, "ms": round((time.perf_counter()-t0)*1000, 2)})
 
+
     # 7) store results
-    t0 = time.perf_counter()
     result_blob = {
         "request_id": request_id,
-        "filename": file.filename,
+        "filename": filename,
         "cv_hash": cv_hash,
         "jd_hash": jd_hash,
         "tone": tone,
         "cover_letter": cover_letter_text,
         "audit_report": audit_report,
         "cv_suggestions": cv_suggestions,
-        "cv_raw_text": parsed.raw_text,
+        "cv_raw_text": cv_text,
     }
+
 
     cache.set_json(f"application:result:{request_id}", result_blob, ttl_seconds=settings.cache_ttl_seconds)
     _log_event({"event": "stage_complete", "stage": "store_results", "request_id": request_id, "ms": round((time.perf_counter()-t0)*1000, 2)})
@@ -192,11 +179,12 @@ async def generate_application(
     # Keep response small; fetch full payload via /applications/{id}/results
     return {
         "request_id": request_id,
-        "filename": file.filename,
+        "filename": filename,
         "cv_hash": cv_hash,
         "jd_hash": jd_hash,
         "tone": tone,
     }
+
 
 
 @router.get("/{request_id}/results")
