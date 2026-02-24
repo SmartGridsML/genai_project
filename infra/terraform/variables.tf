@@ -91,3 +91,15 @@ variable "alarm_sns_topic_arn" {
   description = "SNS topic ARN for alarm notifications. Leave empty to disable actions."
   default     = ""
 }
+
+variable "frontend_container_image" {
+  type        = string
+  description = "Container image for the frontend service."
+  default     = ""
+}
+
+variable "frontend_desired_count" {
+  type        = number
+  description = "Desired number of frontend ECS tasks."
+  default     = 1
+}
