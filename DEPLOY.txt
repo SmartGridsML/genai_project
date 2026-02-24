@@ -1,13 +1,13 @@
 ================================================================================
   FULL DEPLOYMENT GUIDE — AWS (Backend) + Vercel (Frontend)
-  Account: 814298259408  |  Region: us-east-1
+  Account: xxxxxxxx  |  Region: us-east-1
 ================================================================================
 
 WHAT EXISTS ALREADY IN AWS
 ---------------------------
 - ECS Cluster:   cv-cluster
 - ECS Service:   cv-backend-service  (1 Fargate task, currently running)
-- ECR Repo:      814298259408.dkr.ecr.us-east-1.amazonaws.com/cv-backend
+- ECR Repo:      xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/cv-backend
 - CloudWatch:    /ecs/cv-backend-task  (logs active)
 
 WHAT IS MISSING (must be created below)
@@ -120,7 +120,7 @@ STEP 4 — GRANT ECS EXECUTION ROLE ACCESS TO SECRETS
       "Statement": [{
         "Effect": "Allow",
         "Action": ["secretsmanager:GetSecretValue"],
-        "Resource": "arn:aws:secretsmanager:us-east-1:814298259408:secret:cv-backend/*"
+        "Resource": "arn:aws:secretsmanager:us-east-1:xxxxxxxx:secret:cv-backend/*"
       }]
     }' \
     --profile adrian
@@ -144,7 +144,7 @@ STEP 6 — BUILD AND PUSH A FRESH BACKEND IMAGE
   # Authenticate Docker to ECR
   aws ecr get-login-password --region us-east-1 --profile adrian \
     | docker login --username AWS --password-stdin \
-      814298259408.dkr.ecr.us-east-1.amazonaws.com
+      xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com
 
   # Build from repo root
   docker build \
@@ -155,10 +155,10 @@ STEP 6 — BUILD AND PUSH A FRESH BACKEND IMAGE
 
   # Tag and push
   docker tag cv-backend:latest \
-    814298259408.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest
+    xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest
 
   docker push \
-    814298259408.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest
+    xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest
 
 
 STEP 7 — REGISTER NEW TASK DEFINITION WITH SECRETS
@@ -167,14 +167,14 @@ Replace the three SECRET_ARN values with the ARNs from Step 3.
 
   aws ecs register-task-definition \
     --family cv-backend-task \
-    --execution-role-arn arn:aws:iam::814298259408:role/ecsTaskExecutionRole \
+    --execution-role-arn arn:aws:iam::xxxxxxxx:role/ecsTaskExecutionRole \
     --network-mode awsvpc \
     --requires-compatibilities FARGATE \
     --cpu 512 \
     --memory 1024 \
     --container-definitions '[{
       "name": "cv-backend",
-      "image": "814298259408.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest",
+      "image": "xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest",
       "essential": true,
       "portMappings": [{"containerPort": 8000, "protocol": "tcp"}],
       "secrets": [
