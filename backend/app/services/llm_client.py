@@ -9,13 +9,7 @@ from backend.app.config import get_settings
 # Note: The endpoints /fact-extract, /jd-analyze, /cover-letter are placeholders. When Person A finishes their FastAPI routes, you align names.
 
 class LLMClient:
-    """
-    Talks to Person A's service (or your own internal endpoints later).
-    For now, it can run in stub mode if LLM_BASE_URL is not set.
-    """
-
-    def __init__(self, base_url: str | None):
-        self.base_url = base_url
+    def __init__(self):
         settings = get_settings()
         if not settings.gemini_api_key:
             raise RuntimeError("GEMINI_API_KEY is not set")
@@ -111,6 +105,5 @@ class LLMClient:
 from backend.app.config import get_settings
 
 def get_llm_client():
-    settings = get_settings()
-    return LLMClient(base_url=settings.llm_base_url)
+    return LLMClient()
 
