@@ -1,14 +1,24 @@
 services:
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    container_name: cv-helper-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
   backend:
     build:
-      context: ..
+      context: ../backend
     container_name: cv-helper-backend
     ports:
       - "8000:8000"
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
-      - LLM_BASE_URL=
     depends_on:
       - redis
       - postgres
@@ -18,7 +28,7 @@ services:
 
   tests:
     build:
-      context: ..
+      context: ../backend
     working_dir: /app
     volumes:
       - ..:/app
@@ -26,7 +36,6 @@ services:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
-      - LLM_BASE_URL=
     depends_on:
       - redis
       - postgres
@@ -53,4 +62,3 @@ services:
 
 volumes:
   postgres_data:
-
