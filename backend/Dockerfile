@@ -8,8 +8,7 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-COPY __init__.py /app/backend/__init__.py
-COPY app /app/backend/app
+COPY . /app/backend
 
 EXPOSE 8000
 
