@@ -24,15 +24,19 @@ class ErrorResponse(BaseModel):
 
 # Placeholder for Day-2/3 endpoints
 class ApplicationGenerateRequest(BaseModel):
-    cv_text: str = Field(..., min_length=20, description="Extracted CV text (from /applications/parse)")
-    job_description: str = Field(..., min_length=20)
+    cv_text: str = Field(..., min_length=20, max_length=50_000, description="Extracted CV text (from /applications/parse)")
+    job_description: str = Field(..., min_length=20, max_length=10_000)
     tone: Optional[str] = Field(default="professional")
 
 
 class ApplicationGenerateResponse(BaseModel):
     request_id: str
-    cover_letter: str
-    cv_suggestions: List[str] = []
+    access_token: str
+    status: str = "processing"
+    filename: str
+    cv_hash: str
+    jd_hash: str
+    tone: str = "professional"
 
 
 class KeyFact(BaseModel):

@@ -418,4 +418,5 @@ __marimo__/
 
 # MLflow
 mlruns/
-backend/mlruns/
+backend/mlruns/task-def.json
+frontend/.env

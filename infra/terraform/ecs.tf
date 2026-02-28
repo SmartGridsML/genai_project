@@ -87,3 +87,75 @@ resource "aws_ecs_service" "app" {
 
   tags = local.tags
 }
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+
+resource "aws_cloudwatch_log_group" "frontend" {
+  name              = "/ecs/${var.project_name}-frontend"
+  retention_in_days = var.log_retention_in_days
+
+  tags = local.tags
+}
+
+resource "aws_ecs_task_definition" "frontend" {
+  count                    = var.frontend_container_image != "" ? 1 : 0
+  family                   = "${var.project_name}-frontend-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "frontend"
+      image     = var.frontend_container_image
+      essential = true
+      portMappings = [
+        {
+          containerPort = 80
+          hostPort      = 80
+          protocol      = "tcp"
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.frontend.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+
+  tags = local.tags
+}
+
+resource "aws_ecs_service" "frontend" {
+  count           = var.frontend_container_image != "" ? 1 : 0
+  name            = "${var.project_name}-frontend-service"
+  cluster         = aws_ecs_cluster.app.id
+  task_definition = aws_ecs_task_definition.frontend[0].arn
+  desired_count   = var.frontend_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = local.private_subnet_ids
+    security_groups  = [aws_security_group.ecs.id]
+    assign_public_ip = local.assign_public_ip
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.frontend.arn
+    container_name   = "frontend"
+    container_port   = 80
+  }
+
+  depends_on = [
+    aws_lb_listener.http
+  ]
+
+  tags = local.tags
+}
