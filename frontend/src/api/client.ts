@@ -17,7 +17,7 @@ api.interceptors.response.use(
     const status = err.response?.status;
     const data = err.response?.data as any;
     const apiErr: ApiError = {
-      message: data?.message ?? data?.detail ?? err.message ?? "Request failed",
+      message: data?.message ?? (typeof data?.detail === "string" ? data.detail : data?.detail ? JSON.stringify(data.detail) : null) ?? err.message ?? "Request failed",
       status,
       detail: data,
     };
