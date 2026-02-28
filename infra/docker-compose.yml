@@ -19,6 +19,8 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - RESULT_TOKEN_SECRET=${RESULT_TOKEN_SECRET:-dev-secret-change-in-production}
     depends_on:
       - redis
       - postgres
@@ -27,6 +29,7 @@ services:
     working_dir: /app
 
   tests:
+    profiles: ["test"]
     build:
       context: ../backend
     working_dir: /app
