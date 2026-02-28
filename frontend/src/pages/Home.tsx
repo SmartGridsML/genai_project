@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { parseCv, generateApplication, pollResults } from "../api/applications";
 import type { ResultsResponse } from "../api/applications";
 import { CVUploader } from "../components/CVUploader";
@@ -13,12 +13,12 @@ type Step = "upload" | "describe" | "processing" | "results";
 export function Home() {
   const [step, setStep] = useState<Step>("upload");
   const [cvFile, setCvFile] = useState<File | null>(null);
-  const [cvText, setCvText] = useState("");
   const [jobDesc, setJobDesc] = useState("");
-  const [stage, setStage] = useState<"idle" | "parsing_cv" | "extracting_facts" | "analyzing_jd" | "generating_letter" | "auditing" | "done" | "failed">("idle");
+  const [stage, setStage] = useState<"idle" | "parsing_cv" | "generating_letter" | "auditing" | "done" | "failed">("idle");
   const [results, setResults] = useState<ResultsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
   async function handleGenerate() {
@@ -29,24 +29,24 @@ export function Home() {
     try {
       setStage("parsing_cv");
       const parsed = await parseCv(cvFile);
-      setCvText(parsed.parsed_text);
 
       setStage("generating_letter");
       const gen = await generateApplication({ cv_text: parsed.parsed_text, job_description: jobDesc });
-      setAppId(gen.application_id);
+      setAppId(gen.request_id);
+      setAccessToken(gen.access_token);
 
       setStage("auditing");
-      const final = await pollResults(gen.application_id, { intervalMs: 1500, timeoutMs: 120_000 });
+      const final = await pollResults(gen.request_id, gen.access_token, { intervalMs: 1500, timeoutMs: 120_000 });
       setResults(final);
       setStage(final.status === "done" ? "done" : "failed");
-      // setStep("results") is NOT needed — results section is driven by stage now
+      setStep("results");
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong");
       setStage("failed");
     }
   }
 
-  const audit = results?.audit_report?.map((a, i) => ({
+  const audit = results?.audit_report?.verifications?.map((a, i) => ({
     id: String(i),
     claim: a.claim,
     supported: a.supported,
@@ -54,12 +54,14 @@ export function Home() {
     source: a.source,
   })) ?? [];
 
-  const suggestions = results?.cv_suggestions?.map((s, i) => ({
-    id: String(i),
-    section: `Suggestion ${i + 1}`,
-    before: s.before,
-    after: s.after,
-  })) ?? [];
+  const suggestions = results?.cv_suggestions
+    ?.filter((s) => s.before && s.after)
+    .map((s, i) => ({
+      id: String(i),
+      section: `Suggestion ${i + 1}`,
+      before: s.before,
+      after: s.after,
+    })) ?? [];
 
   return (
     <div className="app-shell">
@@ -91,7 +93,7 @@ export function Home() {
               suggest improvements, and audit every claim.
             </p>
             <div className="hero-uploader">
-              <CVUploader onFileSelected={(f) => { setCvFile(f); setStep("describe"); }} />
+              <CVUploader maxSizeMb={5} onFileSelected={(f) => { setCvFile(f); setStep("describe"); }} />
             </div>
           </div>
           <div className="hero-decorations">
@@ -143,7 +145,15 @@ export function Home() {
             <div className="progress-wrap">
               <ProgressIndicator stage={stage} />
             </div>
-            {error && <p className="error-msg">{error}</p>}
+            {error && (
+              <>
+                <p className="error-msg">{error}</p>
+                <div className="error-actions">
+                  <button className="retry-btn" onClick={handleGenerate}>↺ Try again</button>
+                  <button className="back-btn" onClick={() => { setStep("describe"); setStage("idle"); setError(null); }}>← Edit inputs</button>
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}
@@ -157,8 +167,8 @@ export function Home() {
                 <h2 className="results-title">Application Ready</h2>
                 <p className="results-sub">Review, refine, and download your materials below.</p>
               </div>
-              {appId && (
-                <DownloadButton applicationId={appId} apiBaseUrl={apiBase} />
+              {appId && accessToken && (
+                <DownloadButton applicationId={appId} accessToken={accessToken} apiBaseUrl={apiBase} />
               )}
             </div>
 
@@ -376,6 +386,16 @@ export function Home() {
           background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.2);
           padding: 12px 16px; border-radius: var(--radius);
         }
+        .error-actions {
+          display: flex; gap: 12px; justify-content: center; margin-top: 16px;
+        }
+        .retry-btn {
+          background: var(--accent); color: #0c0e14; border: none;
+          padding: 10px 22px; border-radius: var(--radius);
+          font-family: var(--font-body); font-size: 14px; font-weight: 600;
+          cursor: pointer; transition: all 0.2s;
+        }
+        .retry-btn:hover { background: #d4b47a; }
 
         /* Results */
         .results-header {
