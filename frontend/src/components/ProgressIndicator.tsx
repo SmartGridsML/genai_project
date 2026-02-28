@@ -1,8 +1,6 @@
 export type Stage =
   | "idle"
   | "parsing_cv"
-  | "extracting_facts"
-  | "analyzing_jd"
   | "generating_letter"
   | "auditing"
   | "done"
@@ -10,9 +8,7 @@ export type Stage =
 
 const STAGES: Array<{ key: Exclude<Stage, "idle" | "done" | "failed">; label: string }> = [
   { key: "parsing_cv", label: "Parsing CV" },
-  { key: "extracting_facts", label: "Extracting facts" },
-  { key: "analyzing_jd", label: "Analyzing job description" },
-  { key: "generating_letter", label: "Generating cover letter" },
+  { key: "generating_letter", label: "Generating application" },
   { key: "auditing", label: "Auditing claims" },
 ];
 
