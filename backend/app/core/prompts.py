@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from backend.app.models.schemas import ExtractedFacts, JobAnalysis
+from backend.app.models.schemas import ExtractedFacts, JobAnalysis, CVEnhancement
 
 class PromptVersion(Enum):
     V1 = "v1"
@@ -131,6 +131,41 @@ class Prompts:
         else:
             raise ValueError(f"Unsupported prompt version: {version}")
         
+    @staticmethod
+    def get_batch_claim_verification_system(version: PromptVersion) -> str:
+        """Verify ALL claims against the fact table in a single LLM call."""
+        if version == PromptVersion.V1:
+            return """
+            You are a rigorous fact-checker. You will receive a JSON object with:
+            - "claims": a list of factual statements from a cover letter
+            - "facts": the complete fact table extracted from the candidate's CV
+
+            For EACH claim, verify if it is supported by the facts.
+
+            Confidence scoring:
+            - 1.0: Exact match with explicit fact
+            - 0.8-0.9: Strong support, directly inferable
+            - 0.5-0.7: Partial support, somewhat related
+            - 0.0-0.4: Weak or no support
+
+            Return STRICT JSON with this exact structure (one entry per claim, same order):
+            {
+                "verifications": [
+                    {
+                        "claim": "the original claim text",
+                        "supported": true or false,
+                        "source": "Description of supporting fact(s) or 'UNSUPPORTED'",
+                        "confidence": 0.0-1.0,
+                        "reasoning": "Brief explanation"
+                    }
+                ]
+            }
+
+            The "verifications" array MUST contain exactly the same number of items as the input "claims" array, in the same order.
+            """
+        else:
+            raise ValueError(f"Unsupported prompt version: {version}")
+
     @staticmethod
     def get_cv_enhancement_system(version: PromptVersion) -> str:
         schema_json = json.dumps(CVEnhancement.model_json_schema(), indent=2)
