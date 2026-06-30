@@ -13,12 +13,22 @@ output "ecs_cluster_name" {
   value       = aws_ecs_cluster.app.name
 }
 
+output "ecr_backend_url" {
+  description = "ECR repository URL for the backend image."
+  value       = aws_ecr_repository.backend.repository_url
+}
+
+output "ecr_frontend_url" {
+  description = "ECR repository URL for the frontend image."
+  value       = aws_ecr_repository.frontend.repository_url
+}
+
 output "prometheus_workspace_id" {
   description = "Amazon Managed Prometheus workspace ID."
-  value       = aws_prometheus_workspace.main.id
+  value       = length(aws_prometheus_workspace.main) > 0 ? aws_prometheus_workspace.main[0].id : null
 }
 
 output "grafana_workspace_endpoint" {
   description = "Amazon Managed Grafana endpoint."
-  value       = aws_grafana_workspace.main.endpoint
+  value       = length(aws_grafana_workspace.main) > 0 ? aws_grafana_workspace.main[0].endpoint : null
 }

@@ -418,4 +418,9 @@ __marimo__/
 
 # MLflow
 mlruns/
-backend/mlruns/
+backend/mlruns/task-def.json
+frontend/.env
+
+infra/terraform/.terraform/
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.backup

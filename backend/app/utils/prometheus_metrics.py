@@ -410,27 +410,31 @@ from backend.app.utils.prometheus_metrics import (
     record_llm_usage
 )
 
-@app.post("/api/generate")
+@app.post("/v1/applications/generate")
 @track_request_metrics("generate_cover_letter")
-async def generate_cover_letter_endpoint(cv: str, job: str):
-    # Extract facts
-    facts = fact_extractor.extract(cv)
-    record_fact_extraction_metrics(len(facts.facts))
+async def generate_cover_letter_endpoint(cv: str, job: str, llm: LLMClient):
+    # Extract facts and analyse JD
+    facts = await llm.extract_facts({"raw": cv})
+    record_fact_extraction_metrics(len(facts["facts"]))
+    jd = await llm.analyze_jd(job)
 
     # Generate cover letter
-    cover_letter = generate_cover_letter(facts, job)
+    cover = await llm.generate_cover_letter(facts=facts, jd=jd)
+    cover_letter = cover["cover_letter"]
 
     # Audit
-    audit = auditor.audit(cover_letter, facts)
+    from backend.app.models.schemas import ExtractedFacts
+    from backend.app.core.auditor import Auditor
+    auditor = Auditor(llm_client=llm)
+    audit = await auditor.audit(cover_letter, ExtractedFacts.model_validate(facts))
     record_hallucination_metrics(audit)
 
-    # Record LLM usage (if available from LLM service)
     record_llm_usage(
         operation="total_pipeline",
         input_tokens=500,
         output_tokens=300,
         cost=0.024,
-        model="gpt-4"
+        model="gemini-2.5-flash"
     )
 
     return {

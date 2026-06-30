@@ -1,4 +1,5 @@
-resource "aws_security_group" "alb" {
+git add infra/terraform/ecr.tf infra/terraform/s3.tf infra/terraform/ecs.tf
+git commit -m "chore(infra): allow teardown of demo AWS resources"resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb"
   description = "ALB security group"
   vpc_id      = local.vpc_id
@@ -72,12 +73,49 @@ resource "aws_lb_target_group" "app" {
   tags = local.tags
 }
 
+resource "aws_lb_target_group" "frontend" {
+  name        = "${var.project_name}-frontend-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = local.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = "/"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    interval            = 30
+    timeout             = 5
+    matcher             = "200-399"
+  }
+
+  tags = local.tags
+}
+
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"
 
+  # Serve frontend by default when configured, otherwise route everything to backend.
   default_action {
+    type             = "forward"
+    target_group_arn = var.frontend_container_image != "" ? aws_lb_target_group.frontend.arn : aws_lb_target_group.app.arn
+  }
+}
+
+# Route API/docs/health endpoints to the backend.
+resource "aws_lb_listener_rule" "backend" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 10
+
+  condition {
+    path_pattern {
+      values = ["/api/*", "/v1/*", "/docs", "/openapi.json", "/health"]
+    }
+  }
+
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.app.arn
   }

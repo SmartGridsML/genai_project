@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 import difflib
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from backend.app.core.prompts import Prompts, PromptVersion
 from backend.app.models.schemas import CVEnhancement
+
+if TYPE_CHECKING:
+    from backend.app.services.llm_client import LLMClient
 
 
 class CVEnhancerError(RuntimeError):
@@ -36,10 +39,10 @@ def _unified_diff(before: str, after: str) -> str:
 
 
 class CVEnhancer:
-    def __init__(self, llm_service: Any):
-        self.llm = llm_service
+    def __init__(self, llm_client: "LLMClient"):
+        self.llm = llm_client
 
-    def enhance(
+    async def enhance(
         self,
         *,
         original_cv_text: str,
@@ -48,7 +51,6 @@ class CVEnhancer:
         max_suggestions: int = 8,
     ) -> List[CVPatch]:
         system_prompt = Prompts.get_cv_enhancement_system(PromptVersion.V1)
-
         user_prompt = json.dumps(
             {
                 "max_suggestions": max_suggestions,
@@ -61,12 +63,12 @@ class CVEnhancer:
         )
 
         try:
-            resp = self.llm.generate_response(
+            resp = await self.llm.generate_text(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 temperature=0.2,
                 max_tokens=1400,
-                response_format={"type": "json_object"},
+                json_mode=True,
             )
         except Exception as e:
             raise CVEnhancerError(f"LLM call failed: {e}") from e
@@ -75,13 +77,11 @@ class CVEnhancer:
         if not content:
             raise CVEnhancerError("Empty response from CV enhancer")
 
-        # LLMService returns text; parse JSON
         try:
             data = json.loads(content) if isinstance(content, str) else content
         except Exception as e:
             raise CVEnhancerError(f"Invalid JSON from CV enhancer: {e}") from e
 
-        # Validate schema strictly
         try:
             parsed = CVEnhancement.model_validate(data)
         except Exception as e:
@@ -93,7 +93,6 @@ class CVEnhancer:
             after = s.after.strip()
             if not before or not after or before == after:
                 continue
-
             patches.append(
                 CVPatch(
                     section=s.section.strip(),
@@ -104,5 +103,4 @@ class CVEnhancer:
                     diff_unified=_unified_diff(before, after),
                 )
             )
-
         return patches

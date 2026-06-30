@@ -19,7 +19,19 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
     database_url: str = "postgresql://localhost:5432/postgres"
     cache_ttl_seconds: int = int(24 * 3600)
-    llm_base_url: str = "https://api.openai.com/v1"
+
+    # Deployment environment — set to "production" in prod to enforce security checks
+    environment: str = Field(default="development")
+
+    # Proxy/header trust for rate limiting
+    trust_proxy_headers: bool = Field(
+        default=False,
+        description="Whether to trust X-Forwarded-For for client IP extraction.",
+    )
+    trusted_proxy_ips: str = Field(
+        default="",
+        description="Comma-separated proxy IPs allowed to forward client IP headers.",
+    )
 
     # LLM Configuration
     # NOTE: keep it optional for import-time, enforce at call-time.
@@ -31,9 +43,16 @@ class Settings(BaseSettings):
     max_retries: int = 3
     timeout_seconds: int = 30
 
-    # MLflow
+    # MLflow — disabled by default; enable explicitly via MLFLOW_ENABLED=true
     mlflow_tracking_uri: str = "file:./mlruns"
     experiment_name: str = "cv_helper_v1"
+    mlflow_enabled: bool = False
+
+    # Access token secret — MUST be set in production via RESULT_TOKEN_SECRET env var
+    result_token_secret: SecretStr = Field(
+        default="dev-secret-change-in-production",
+        description="HMAC secret for signing result access tokens",
+    )
 
 @lru_cache
 def get_settings() -> Settings:

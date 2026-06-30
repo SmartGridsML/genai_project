@@ -1,0 +1,366 @@
+================================================================================
+  FULL DEPLOYMENT GUIDE — AWS (Backend) + Vercel (Frontend)
+  Account: xxxxxxxx  |  Region: us-east-1
+================================================================================
+
+WHAT EXISTS ALREADY IN AWS
+---------------------------
+- ECS Cluster:   cv-cluster
+- ECS Service:   cv-backend-service  (1 Fargate task, currently running)
+- ECR Repo:      xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/cv-backend
+- CloudWatch:    /ecs/cv-backend-task  (logs active)
+
+WHAT IS MISSING (must be created below)
+-----------------------------------------
+- RDS Postgres instance  (backend needs DATABASE_URL)
+- Application Load Balancer  (backend has no public URL yet)
+- GEMINI_API_KEY + env vars injected into ECS task
+- ECR repo for frontend (optional — Vercel builds it)
+
+
+================================================================================
+  PART 1 — AWS BACKEND
+================================================================================
+
+STEP 1 — PREREQUISITES
+-----------------------
+Make sure you have installed:
+  - AWS CLI  (configured with profile "adrian")
+  - Docker Desktop  (running)
+  - psql  (optional, for DB verification)
+
+Verify your profile works:
+  aws sts get-caller-identity --profile adrian
+
+
+STEP 2 — CREATE RDS POSTGRES
+------------------------------
+This creates a small Postgres instance in the default VPC.
+It takes ~5 minutes to become available.
+
+  # Create a subnet group from the 6 existing public subnets
+  aws rds create-db-subnet-group \
+    --db-subnet-group-name cv-subnet-group \
+    --db-subnet-group-description "CV app subnets" \
+    --subnet-ids \
+      subnet-087661463378e408d \
+      subnet-04a420c43262a5112 \
+      subnet-0fb8a066fc0881338 \
+    --profile adrian
+
+  # Create the RDS instance (db.t3.micro — free tier eligible)
+  aws rds create-db-instance \
+    --db-instance-identifier cv-postgres \
+    --db-instance-class db.t3.micro \
+    --engine postgres \
+    --engine-version 15 \
+    --master-username postgres \
+    --master-user-password YOUR_DB_PASSWORD \
+    --db-name postgres \
+    --db-subnet-group-name cv-subnet-group \
+    --vpc-security-group-ids sg-0a0c6dc8099172819 \
+    --publicly-accessible \
+    --allocated-storage 20 \
+    --no-multi-az \
+    --profile adrian
+
+  # Wait for it to be available (~5 min)
+  aws rds wait db-instance-available \
+    --db-instance-identifier cv-postgres \
+    --profile adrian
+
+  # Get the endpoint
+  aws rds describe-db-instances \
+    --db-instance-identifier cv-postgres \
+    --query 'DBInstances[0].Endpoint.Address' \
+    --output text \
+    --profile adrian
+
+  # Save it — you'll need it as:
+  DATABASE_URL=postgresql://postgres:YOUR_DB_PASSWORD@<endpoint>:5432/postgres
+
+
+STEP 3 — STORE SECRETS IN AWS SECRETS MANAGER
+-----------------------------------------------
+  aws secretsmanager create-secret \
+    --name cv-backend/GEMINI_API_KEY \
+    --secret-string "YOUR_GEMINI_API_KEY" \
+    --profile adrian
+
+  aws secretsmanager create-secret \
+    --name cv-backend/DATABASE_URL \
+    --secret-string "postgresql://postgres:YOUR_DB_PASSWORD@<rds-endpoint>:5432/postgres" \
+    --profile adrian
+
+  aws secretsmanager create-secret \
+    --name cv-backend/REDIS_URL \
+    --secret-string "redis://localhost:6379/0" \
+    --profile adrian
+
+  # Note the ARNs — you'll need them in Step 5.
+  # To retrieve an ARN later:
+  aws secretsmanager describe-secret \
+    --secret-id cv-backend/GEMINI_API_KEY \
+    --query 'ARN' --output text --profile adrian
+
+
+STEP 4 — GRANT ECS EXECUTION ROLE ACCESS TO SECRETS
+-----------------------------------------------------
+  # Get the execution role ARN
+  aws iam get-role \
+    --role-name ecsTaskExecutionRole \
+    --query 'Role.Arn' --output text --profile adrian
+
+  # Attach the Secrets Manager read policy
+  aws iam put-role-policy \
+    --role-name ecsTaskExecutionRole \
+    --policy-name cv-secrets-access \
+    --policy-document '{
+      "Version": "2012-10-17",
+      "Statement": [{
+        "Effect": "Allow",
+        "Action": ["secretsmanager:GetSecretValue"],
+        "Resource": "arn:aws:secretsmanager:us-east-1:xxxxxxxx:secret:cv-backend/*"
+      }]
+    }' \
+    --profile adrian
+
+
+STEP 5 — OPEN RDS SECURITY GROUP TO ECS
+-----------------------------------------
+The default security group needs to allow port 5432 from itself
+(ECS tasks and RDS are both in the default SG).
+
+  aws ec2 authorize-security-group-ingress \
+    --group-id sg-0a0c6dc8099172819 \
+    --protocol tcp \
+    --port 5432 \
+    --source-group sg-0a0c6dc8099172819 \
+    --profile adrian
+
+
+STEP 6 — BUILD AND PUSH A FRESH BACKEND IMAGE
+-----------------------------------------------
+  # Authenticate Docker to ECR
+  aws ecr get-login-password --region us-east-1 --profile adrian \
+    | docker login --username AWS --password-stdin \
+      xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com
+
+  # Build from repo root
+  docker build \
+    -f backend/Dockerfile \
+    -t cv-backend:latest \
+    --platform linux/amd64 \
+    backend/
+
+  # Tag and push
+  docker tag cv-backend:latest \
+    xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest
+
+  docker push \
+    xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest
+
+
+STEP 7 — REGISTER NEW TASK DEFINITION WITH SECRETS
+----------------------------------------------------
+Replace the three SECRET_ARN values with the ARNs from Step 3.
+
+  aws ecs register-task-definition \
+    --family cv-backend-task \
+    --execution-role-arn arn:aws:iam::xxxxxxxx:role/ecsTaskExecutionRole \
+    --network-mode awsvpc \
+    --requires-compatibilities FARGATE \
+    --cpu 512 \
+    --memory 1024 \
+    --container-definitions '[{
+      "name": "cv-backend",
+      "image": "xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/cv-backend:latest",
+      "essential": true,
+      "portMappings": [{"containerPort": 8000, "protocol": "tcp"}],
+      "secrets": [
+        {"name": "GEMINI_API_KEY",  "valueFrom": "ARN_FOR_cv-backend/GEMINI_API_KEY"},
+        {"name": "DATABASE_URL",    "valueFrom": "ARN_FOR_cv-backend/DATABASE_URL"},
+        {"name": "REDIS_URL",       "valueFrom": "ARN_FOR_cv-backend/REDIS_URL"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/cv-backend-task",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }]' \
+    --profile adrian
+
+
+STEP 8 — CREATE APPLICATION LOAD BALANCER
+------------------------------------------
+  # Create ALB security group (allows HTTP from anywhere)
+  aws ec2 create-security-group \
+    --group-name cv-alb-sg \
+    --description "ALB public HTTP" \
+    --vpc-id vpc-0d30b4de1142471a2 \
+    --profile adrian
+  # Note the GroupId returned (ALB_SG_ID)
+
+  aws ec2 authorize-security-group-ingress \
+    --group-id ALB_SG_ID \
+    --protocol tcp --port 80 --cidr 0.0.0.0/0 \
+    --profile adrian
+
+  # Allow ALB to reach ECS tasks on port 8000
+  aws ec2 authorize-security-group-ingress \
+    --group-id sg-0a0c6dc8099172819 \
+    --protocol tcp --port 8000 \
+    --source-group ALB_SG_ID \
+    --profile adrian
+
+  # Create the ALB
+  aws elbv2 create-load-balancer \
+    --name cv-alb \
+    --subnets \
+      subnet-087661463378e408d \
+      subnet-04a420c43262a5112 \
+      subnet-0fb8a066fc0881338 \
+    --security-groups ALB_SG_ID \
+    --profile adrian
+  # Note the LoadBalancerArn and DNSName
+
+  # Create target group
+  aws elbv2 create-target-group \
+    --name cv-backend-tg \
+    --protocol HTTP --port 8000 \
+    --vpc-id vpc-0d30b4de1142471a2 \
+    --target-type ip \
+    --health-check-path /health \
+    --profile adrian
+  # Note the TargetGroupArn
+
+  # Create listener
+  aws elbv2 create-listener \
+    --load-balancer-arn ALB_ARN \
+    --protocol HTTP --port 80 \
+    --default-actions Type=forward,TargetGroupArn=TARGET_GROUP_ARN \
+    --profile adrian
+
+
+STEP 9 — UPDATE ECS SERVICE
+-----------------------------
+  aws ecs update-service \
+    --cluster cv-cluster \
+    --service cv-backend-service \
+    --task-definition cv-backend-task \
+    --load-balancers \
+      "targetGroupArn=TARGET_GROUP_ARN,containerName=cv-backend,containerPort=8000" \
+    --force-new-deployment \
+    --profile adrian
+
+  # Watch it stabilise (takes ~2 min)
+  aws ecs wait services-stable \
+    --cluster cv-cluster \
+    --services cv-backend-service \
+    --profile adrian
+
+
+STEP 10 — VERIFY BACKEND IS LIVE
+----------------------------------
+  curl http://<ALB_DNS_NAME>/health
+  # Expected: {"status": "ok"}  or similar 200 response
+
+  # View live logs
+  aws logs tail /ecs/cv-backend-task --follow --profile adrian
+
+
+================================================================================
+  PART 2 — VERCEL FRONTEND
+================================================================================
+
+STEP 1 — PUSH REPO TO GITHUB
+------------------------------
+Make sure all current changes are committed and pushed:
+  git add .
+  git commit -m "your message"
+  git push origin main
+
+
+STEP 2 — IMPORT PROJECT INTO VERCEL
+-------------------------------------
+1. Go to https://vercel.com/new
+2. Click "Import Git Repository"
+3. Select your GitHub repo (SmartGridsML/genai-project or similar)
+4. Configure the project:
+     Framework Preset:   Vite
+     Root Directory:     frontend          ← IMPORTANT: set this
+     Build Command:      npm run build     (auto-detected)
+     Output Directory:   dist              (auto-detected)
+
+
+STEP 3 — ADD ENVIRONMENT VARIABLE
+-----------------------------------
+In the Vercel project settings → Environment Variables, add:
+
+  Name:   VITE_API_BASE_URL
+  Value:  http://<ALB_DNS_NAME>
+          (the DNS name from Step 8 of Part 1, e.g. cv-alb-1234567890.us-east-1.elb.amazonaws.com)
+
+  Apply to: Production, Preview, Development
+
+
+STEP 4 — DEPLOY
+----------------
+Click "Deploy". Vercel will:
+  1. Run: npm ci
+  2. Run: npm run build  (Vite builds with your VITE_API_BASE_URL baked in)
+  3. Serve the dist/ folder globally via Vercel's CDN
+
+Your app will be live at:  https://<your-project>.vercel.app
+
+
+STEP 5 — FIX CORS ON BACKEND
+------------------------------
+Once you have the Vercel URL, update the backend's CORS allowed origins.
+Find the CORS config in backend/app/main.py and add your Vercel domain,
+then rebuild and push (repeat Part 1 Steps 6–9).
+
+Example (in main.py):
+  allow_origins=["https://your-project.vercel.app"]
+
+
+================================================================================
+  ONGOING DEPLOYMENTS (after initial setup)
+================================================================================
+
+TO DEPLOY A BACKEND UPDATE:
+  1. Build & push new image (Part 1 Step 6)
+  2. Force new ECS deployment:
+       aws ecs update-service \
+         --cluster cv-cluster \
+         --service cv-backend-service \
+         --force-new-deployment \
+         --profile adrian
+
+TO DEPLOY A FRONTEND UPDATE:
+  Push to your main branch — Vercel auto-deploys on every push.
+
+
+================================================================================
+  MONTHLY COST ESTIMATE (approximate)
+================================================================================
+
+  ECS Fargate (1 task, 512 CPU / 1024 MB)  ~$15/mo
+  RDS Postgres db.t3.micro                  ~$15/mo  (or free tier if <12 mo)
+  ALB                                       ~$18/mo
+  ECR storage (1 image ~325MB)              ~$0.03/mo
+  CloudWatch logs                           ~$1/mo
+  Vercel (Hobby plan)                       FREE
+  ─────────────────────────────────────────────────
+  Total                                     ~$49/mo
+
+  Cost-saving tip: Stop RDS and ECS tasks when not in use during development.
+    aws ecs update-service --cluster cv-cluster \
+      --service cv-backend-service --desired-count 0 --profile adrian
+    aws rds stop-db-instance \
+      --db-instance-identifier cv-postgres --profile adrian
+
+================================================================================

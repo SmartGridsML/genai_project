@@ -9,6 +9,13 @@ data "aws_iam_policy_document" "ecs_task_assume_role" {
   }
 }
 
+locals {
+  task_execution_secret_arns = concat(
+    [for param in aws_ssm_parameter.env : param.arn],
+    [for secret in aws_secretsmanager_secret.env : secret.arn]
+  )
+}
+
 resource "aws_iam_role" "ecs_task_execution" {
   name               = "${var.project_name}-ecs-task-execution"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
@@ -22,8 +29,9 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
 }
 
 resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
-  name = "${var.project_name}-ecs-task-execution-secrets"
-  role = aws_iam_role.ecs_task_execution.id
+  count = length(local.task_execution_secret_arns) > 0 ? 1 : 0
+  name  = "${var.project_name}-ecs-task-execution-secrets"
+  role  = aws_iam_role.ecs_task_execution.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -35,12 +43,7 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
           "ssm:GetParameter",
           "secretsmanager:GetSecretValue"
         ]
-        Resource = [
-          for arn in concat(
-            [for param in aws_ssm_parameter.env : param.arn],
-            [for secret in aws_secretsmanager_secret.env : secret.arn]
-          ) : arn
-        ]
+        Resource = local.task_execution_secret_arns
       }
     ]
   })

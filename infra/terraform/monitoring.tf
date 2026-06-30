@@ -1,16 +1,19 @@
 resource "aws_prometheus_workspace" "main" {
+  count = var.enable_managed_monitoring ? 1 : 0
   alias = "${var.project_name}-prometheus"
 
   tags = local.tags
 }
 
 resource "aws_prometheus_rule_group_namespace" "alerts" {
+  count        = var.enable_managed_monitoring ? 1 : 0
   name         = "${var.project_name}-alerts"
-  workspace_id = aws_prometheus_workspace.main.id
+  workspace_id = aws_prometheus_workspace.main[0].id
   data         = file("${path.module}/prometheus/alert-rules.yaml")
 }
 
 resource "aws_grafana_workspace" "main" {
+  count                    = var.enable_managed_monitoring ? 1 : 0
   name                     = "${var.project_name}-grafana"
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"]
